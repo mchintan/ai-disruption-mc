@@ -1,5 +1,7 @@
 # AI Disruption Monte Carlo
 
+![AI Disruption Monte Carlo](public/screenshot.png)
+
 ## Geometric Brownian Motion at the Core
 
 This simulator is built on **Geometric Brownian Motion (GBM)** — the same stochastic process used to model stock prices in quantitative finance — applied here to model the cascading effects of AI-driven job displacement across economic, asset, and skill dimensions.
