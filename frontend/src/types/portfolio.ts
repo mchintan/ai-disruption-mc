@@ -110,3 +110,115 @@ export interface OptimizeResponse {
   narrative: string;
   optimized_simulation: SimulateResponse;
 }
+
+// Backtest types
+
+export interface BacktestAsset {
+  ticker: string;
+  allocation_pct: number;
+}
+
+export interface BacktestRequest {
+  crisis_id: string;
+  portfolio: BacktestAsset[];
+  num_simulations: number;
+  initial_investment: number;
+  model: "gbm" | "merton";
+  rebalance: boolean;
+  seed: number | null;
+}
+
+export interface BacktestStatistics {
+  total_return_pct: number;
+  annualized_return_pct: number;
+  final_value_median: number;
+  final_value_p5: number;
+  final_value_p95: number;
+  max_drawdown_pct: number;
+  max_drawdown_p95: number;
+  sharpe_ratio: number;
+  sortino_ratio: number;
+  calmar_ratio: number;
+  var_95: number;
+  var_99: number;
+  best_day_pct: number;
+  worst_day_pct: number;
+  positive_days_pct: number;
+  recovery_days: number | null;
+  volatility_ann_pct: number;
+}
+
+export interface CrisisInfo {
+  id: string;
+  name: string;
+  start_date: string;
+  end_date: string;
+  trading_days: number;
+  description: string;
+}
+
+export interface AssetCurveResult {
+  ticker: string;
+  name: string;
+  allocation_pct: number;
+  median_curve: number[];
+  final_median: number;
+  final_return_pct: number;
+}
+
+export interface EquityPercentile {
+  day: number;
+  p5: number;
+  p25: number;
+  median: number;
+  p75: number;
+  p95: number;
+}
+
+export interface DrawdownPercentile {
+  day: number;
+  median: number;
+  p75: number;
+  p95: number;
+}
+
+export interface ReturnsHistogramBin {
+  bin: number;
+  count: number;
+  is_negative: boolean;
+}
+
+export interface BacktestResponse {
+  crisis: CrisisInfo;
+  portfolio: Array<{ ticker: string; name: string; allocation_pct: number }>;
+  equity_percentiles: EquityPercentile[];
+  drawdown_curve: number[];
+  drawdown_percentiles: DrawdownPercentile[];
+  sample_paths: Array<Array<{ day: number; value: number }>>;
+  asset_curves: AssetCurveResult[];
+  returns_histogram: ReturnsHistogramBin[];
+  statistics: BacktestStatistics;
+  config: {
+    num_simulations: number;
+    initial_investment: number;
+    model: string;
+    rebalance: boolean;
+  };
+}
+
+export interface CrisisPeriodSummary {
+  id: string;
+  name: string;
+  start_date: string;
+  end_date: string;
+  trading_days: number;
+  description: string;
+  available_assets: string[];
+}
+
+export interface BacktestAssetInfo {
+  ticker: string;
+  name: string;
+}
+
+export type AppMode = "simulate" | "backtest";
