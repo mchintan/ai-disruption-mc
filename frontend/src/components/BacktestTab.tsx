@@ -10,7 +10,7 @@ interface Props {
 
 // BacktestPanel is self-contained with its own state management.
 // In a future iteration we will pass props to pre-populate from current portfolio.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function BacktestTab(props: Props) {
+export function BacktestTab(_props: Props) {
+  void _props;
   return <BacktestPanel />;
 }
