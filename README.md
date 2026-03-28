@@ -10,29 +10,33 @@ The platform also includes a **Historical Crisis Stress Test** mode that backtes
 
 ## Screenshots
 
-### Step 1 — Describe Your Portfolio
-Describe your investment goals in natural language. Select risk tolerance and investment horizon. Choose from preset prompts or write your own.
+### Build — AI Portfolio Generator
+Describe your investment goals in natural language. Select risk tolerance and investment horizon. Choose from preset prompts or write your own. AI recommends specific assets with calibrated drift, volatility, and jump parameters. Edit allocations, add/remove assets, and review the first-principles rationale.
 
-![Step 1 — Describe](docs/step1-describe.png)
+![Build Tab](docs/build-tab.png)
+![Build Tab — Portfolio](docs/build-tab-portfolio.png)
 
-### Step 2 — Review AI Analysis
-AI analyzes your description and recommends specific assets with calibrated drift, volatility, and jump parameters. Edit allocations, add/remove assets, and review the first-principles rationale.
+### Simulate — Monte Carlo Engine
+Choose between Geometric Brownian Motion and Merton Jump Diffusion models. Set number of simulations (50–2,000), horizon (1–30 years), initial investment, and random seed. View results with key metrics (median terminal value, VaR, Sharpe ratio, max drawdown), percentile fan chart, sample paths, detailed risk metrics, and per-asset breakdown.
 
-![Step 2 — Analyze](docs/step2-analyze.png)
+![Simulate Tab — Config](docs/simulate-tab-config.png)
+![Simulate Tab — Results](docs/simulate-tab-results.png)
+![Simulate Tab — Details](docs/simulate-tab-details.png)
 
-### Step 3 — Configure Simulation
-Choose between Geometric Brownian Motion and Merton Jump Diffusion models. Set number of simulations (50-2000), horizon (1-30 years), initial investment, and random seed.
+### Optimize — Portfolio Weight Optimizer
+Run SLSQP-based optimization with 5 objectives: Max Sharpe, Min VaR, Min CVaR, Min Drawdown, or Max Return. Compare original vs optimized weights and apply with one click.
 
-![Step 3 — Configure](docs/step3-configure.png)
+![Optimize Tab](docs/optimize-tab.png)
 
-### Step 4 — Simulation Results
-Interactive dashboard with key metrics (median terminal value, VaR, Sharpe ratio, max drawdown), percentile fan chart (P10/P25/median/P75/P90), sample simulation paths, detailed risk metrics table, and per-asset breakdown.
+### Backtest — Historical Crisis Stress Test
+Backtest any portfolio against 6 historical market crises (COVID-19, 2022 Crypto Winter, 2018 Bear Market, China Ban 2021, GFC 2008, Dot-Com Bust). Configure asset allocations with presets and run Monte Carlo simulation calibrated to crisis-era parameters.
 
-![Step 4 — Simulate](docs/step4-simulate.png)
-![Step 4 — Details](docs/step4-simulate-details.png)
+![Backtest Tab](docs/backtest-tab.png)
 
-### Stress Test — Historical Crisis Backtest
-Switch to "Stress Test" mode to backtest any portfolio against 6 historical market crises. Select a crisis period, configure asset allocations with presets, and run Monte Carlo simulation calibrated to crisis-era parameters. View results across 6 tabs: equity curve with confidence bands, drawdown analysis, per-asset breakdown, sample paths, returns histogram, and detailed statistics including Sharpe, Sortino, Calmar ratios, VaR, and recovery time.
+### Execute — Brokerage Integration
+Connect your brokerage account (Alpaca supported, IBKR coming soon) via OAuth. Generate trade lists from target allocations vs current holdings and execute with one click. Paper and live trading modes with safety gates.
+
+![Execute Tab](docs/execute-tab.png)
 
 ---
 
@@ -140,7 +144,18 @@ The backend is organized into **bounded context modules** — logically separate
 
 ## Getting Started
 
-### Prerequisites
+### Quick Start (Docker)
+
+```bash
+cp .env.example .env          # edit .env to add GEMINI_API_KEY (optional)
+docker compose up --build
+# Backend:  http://localhost:8000  (API docs at /docs)
+# Frontend: http://localhost:8080
+```
+
+No GCP credentials needed for local dev. `GEMINI_API_KEY` is optional — the app falls back to curated portfolios if unset.
+
+### Prerequisites (without Docker)
 
 - Python 3.12+
 - [Poetry](https://python-poetry.org/docs/#installation) (Python package manager)
