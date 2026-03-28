@@ -7,6 +7,7 @@ import { SimulationConfig } from "./components/SimulationConfig";
 import { SimulationDashboard } from "./components/SimulationDashboard";
 import { BacktestPanel } from "./components/BacktestPanel";
 import { analyzePortfolio, runSimulation } from "./api";
+import { track } from "./telemetry";
 import type { AppStep, AppMode, AssetParams, AnalyzeResponse, SimulateResponse } from "./types/portfolio";
 
 function AppContent() {
@@ -37,6 +38,7 @@ function AppContent() {
       setAssets(result.assets);
       setCorrelationMatrix(result.correlation_matrix);
       setStep("analyze");
+      track("step_completed", { context: "intake" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Analysis failed");
     } finally {
@@ -48,6 +50,7 @@ function AppContent() {
     setAssets(confirmedAssets);
     setCorrelationMatrix(confirmedCorrelation);
     setStep("configure");
+    track("step_completed", { context: "portfolio" });
   };
 
   const handleRunSimulation = async (config: {
@@ -72,6 +75,7 @@ function AppContent() {
       });
       setSimulationResult(result);
       setStep("simulate");
+      track("step_completed", { context: "simulation" });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Simulation failed");
     } finally {
@@ -80,6 +84,7 @@ function AppContent() {
   };
 
   const handleRestart = () => {
+    track("flow_restarted");
     setStep("describe");
     setAnalysis(null);
     setAssets([]);
@@ -128,7 +133,7 @@ function AppContent() {
                 Forward Sim
               </button>
               <button
-                onClick={() => setMode("backtest")}
+                onClick={() => { setMode("backtest"); track("mode_switched", { mode: "backtest" }); }}
                 className={`px-3 py-1.5 rounded-md text-xs font-mono font-semibold transition-all ${
                   mode === "backtest"
                     ? "bg-white text-red-700 shadow-sm dark:bg-slate-700 dark:text-red-400"
