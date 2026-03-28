@@ -1,186 +1,249 @@
-# AI Disruption Monte Carlo
+# Portfolio Monte Carlo Simulator
 
-![AI Disruption Monte Carlo](public/screenshot.png)
+An enterprise-grade portfolio simulation platform that combines **AI-powered analysis** with **Monte Carlo methods** (GBM and Merton Jump Diffusion) to model portfolio outcomes across thousands of stochastic paths.
 
-## Geometric Brownian Motion at the Core
+Users describe a portfolio in plain English, review AI-recommended assets with calibrated parameters, configure simulation settings, and visualize results through interactive percentile fan charts, sample paths, and comprehensive risk metrics.
 
-This simulator is built on **Geometric Brownian Motion (GBM)** — the same stochastic process used to model stock prices in quantitative finance — applied here to model the cascading effects of AI-driven job displacement across economic, asset, and skill dimensions.
+---
 
-Each variable evolves according to the stochastic differential equation:
+## Screenshots
+
+### Step 1 — Describe Your Portfolio
+Describe your investment goals in natural language. Select risk tolerance and investment horizon. Choose from preset prompts or write your own.
+
+![Step 1 — Describe](docs/step1-describe.png)
+
+### Step 2 — Review AI Analysis
+AI analyzes your description and recommends specific assets with calibrated drift, volatility, and jump parameters. Edit allocations, add/remove assets, and review the first-principles rationale.
+
+![Step 2 — Analyze](docs/step2-analyze.png)
+
+### Step 3 — Configure Simulation
+Choose between Geometric Brownian Motion and Merton Jump Diffusion models. Set number of simulations (50-2000), horizon (1-30 years), initial investment, and random seed.
+
+![Step 3 — Configure](docs/step3-configure.png)
+
+### Step 4 — Simulation Results
+Interactive dashboard with key metrics (median terminal value, VaR, Sharpe ratio, max drawdown), percentile fan chart (P10/P25/median/P75/P90), sample simulation paths, detailed risk metrics table, and per-asset breakdown.
+
+![Step 4 — Simulate](docs/step4-simulate.png)
+![Step 4 — Details](docs/step4-simulate-details.png)
+
+---
+
+## Architecture
 
 ```
-dX = μ·dt + σ·√dt·Z
+┌─────────────────────────────────────────────────────────┐
+│                    React Frontend                        │
+│  Step 1: Describe → Step 2: Analyze → Step 3: Configure │
+│                    → Step 4: Simulate                    │
+│  React 18 + TypeScript + Tailwind CSS + Recharts         │
+└────────────────────────┬────────────────────────────────┘
+                         │ HTTP (JSON)
+                         ▼
+┌─────────────────────────────────────────────────────────┐
+│                   FastAPI Backend                         │
+│  POST /api/analyze-portfolio  →  Gemini AI Analyzer      │
+│  POST /api/simulate           →  Monte Carlo Engine      │
+│                                                          │
+│  NumPy + SciPy + google-genai                            │
+└─────────────────────────────────────────────────────────┘
 ```
 
-Where:
-- **μ (drift)** — the expected directional trend of the variable (e.g., white collar employment drifts at -2.8/yr, AI equities at +12/yr)
-- **σ (volatility)** — the degree of randomness/uncertainty around that trend
-- **Z** — a standard normal random variable generated via the **Box-Muller transform**
-- **dt** — the time step (1 year)
+**Backend** — Python 3.12 / FastAPI. Two endpoints: portfolio analysis (Gemini AI with curated fallbacks) and Monte Carlo simulation (GBM + Merton Jump Diffusion with Cholesky-correlated assets).
 
-Hundreds of independent stochastic paths are generated using **Monte Carlo sampling** with a seeded **Mulberry32 PRNG** for reproducibility. Paths are then aggregated into percentile bands (P10, P25, median, P75, P90) to visualize the full distribution of possible futures.
+**Frontend** — React 18 / TypeScript / Vite. 4-step wizard UI with editable parameters, interactive Recharts visualizations, and a dark enterprise theme built with Tailwind CSS.
 
-### Phase-Accelerated Drift & Volatility
+---
 
-The simulation isn't static GBM — drift and volatility **multiply through five disruption phases**, reflecting the compounding nature of AI capability:
+## Key Features
 
-| Phase | Period | Drift Multiplier | Vol Multiplier |
-|-------|--------|:-:|:-:|
-| AI Copilots | 2024–2026 | 1.0x | 1.0x |
-| AI Agents | 2026–2028 | 1.0x | 1.0x |
-| AI Workers | 2028–2031 | 1.3x | 1.2x |
-| Physical Robots | 2031–2035 | 1.6x | 1.5x |
-| AGI/Post-Labor | 2035–2040 | 2.0x | 1.8x |
+- **Natural Language Portfolio Builder** — describe your portfolio in plain English; AI recommends assets with calibrated parameters
+- **Geometric Brownian Motion (GBM)** — `S(t+dt) = S(t) * exp((mu - sigma^2/2)*dt + sigma*sqrt(dt)*Z)`
+- **Merton Jump Diffusion** — `dS/S = (mu - lambda*k)dt + sigma*dW + J*dN` with Poisson jumps and log-normal jump sizes
+- **Cholesky-Decomposed Correlation** — correlated Brownian motions across all assets via Cholesky factorization
+- **Comprehensive Risk Metrics** — VaR (95%, 99%), CVaR (Expected Shortfall), Sharpe Ratio, Max Drawdown
+- **Percentile Fan Charts** — P10, P25, Median, P75, P90 bands at annual intervals from monthly time steps
+- **Per-Asset Breakdown** — individual asset results with allocation, terminal value, return, volatility, and drawdown
+- **Configurable Parameters** — number of simulations, horizon, model type, initial investment, random seed
+- **Editable Asset Allocations** — adjust drift, volatility, jump intensity, and allocation percentages before simulation
+- **AI Fallback System** — 3 curated portfolio templates when Gemini API is unavailable
 
-Four scenario overlays further modify drift/vol:
-- **Base Case** — gradual AI adoption, mixed policy response
-- **Accelerated** — 1.5x drift, 1.3x vol
-- **Regulated Slowdown** — 0.5x drift, 0.7x vol
-- **Systemic Shock** — 1.8x drift, 2.0x vol
+---
 
-### Interactive Policy Decisions
+## Dependencies
 
-An optional decision engine lets you inject policy actions (UBI, regulation, retraining, wealth taxes) at phase boundaries. Each policy modifies drift and volatility of affected variables with a **5-year half-life decay**, so interventions gradually fade rather than permanently altering the trajectory.
+### Backend (Python 3.12)
 
-### What's Being Modeled
+| Package | Version | Purpose |
+|---------|---------|---------|
+| `fastapi[standard]` | ^0.135.2 | Web framework with Uvicorn |
+| `numpy` | ^2.4.3 | Monte Carlo simulation engine |
+| `scipy` | ^1.17.1 | Statistical functions, Cholesky decomposition |
+| `pydantic` | ^2.12.5 | Request/response validation |
+| `google-genai` | ^1.68.0 | Gemini AI portfolio analysis |
 
-**8 Macro Variables** — white/blue collar employment, GDP growth, inequality, social stability, UBI probability, productivity, deflation pressure
+### Frontend (Node.js)
 
-**11 Asset Classes** — AI equities, traditional equities, commercial/residential RE, crypto, gold, govt bonds, energy infrastructure, robotics, defense tech, farmland
+| Package | Version | Purpose |
+|---------|---------|---------|
+| `react` | ^18.3.1 | UI framework |
+| `react-dom` | ^18.3.1 | React DOM renderer |
+| `typescript` | ~5.6.2 | Type safety |
+| `vite` | ^6.0.1 | Build tool and dev server |
+| `tailwindcss` | ^3.4.16 | Utility-first CSS |
+| `recharts` | ^2.12.4 | Charts (fan chart, line chart) |
+| `lucide-react` | ^0.364.0 | Icons |
+| `class-variance-authority` | ^0.7.1 | Component variants |
+| `clsx` | ^2.1.1 | Conditional classnames |
+| `tailwind-merge` | ^3.5.0 | Tailwind class merging |
 
-**8 Skill Categories** — traditional coding, AI orchestration, human judgment, physical trades, creative, capital management, political power, systems thinking
+---
 
-200+ stochastic paths across all variables, 2024–2040.
+## Getting Started
 
-## Local Development
+### Prerequisites
+
+- Python 3.12+
+- [Poetry](https://python-poetry.org/docs/#installation) (Python package manager)
+- Node.js 18+ and npm
+
+### Backend Setup
 
 ```bash
+cd backend
+
+# Install dependencies
+poetry install
+
+# (Optional) Set Gemini API key for AI analysis
+# Without it, the app uses curated fallback portfolios
+export GEMINI_API_KEY="your-google-gemini-api-key"
+
+# Start the backend server
+poetry run uvicorn app.main:app --reload --port 8000
+```
+
+The API will be available at `http://localhost:8000`. API docs at `http://localhost:8000/docs`.
+
+### Frontend Setup
+
+```bash
+cd frontend
+
+# Install dependencies
 npm install
+
+# Start the dev server
 npm run dev
-# Opens at http://localhost:3000
 ```
 
-## Deploy to GCP
+The app will be available at `http://localhost:5173`.
 
-### Option A: Firebase Hosting (Recommended — fastest, free tier)
+### Environment Variables
 
-Firebase Hosting is ideal for static sites. Free tier covers 10GB hosting + 360MB/day transfer.
+| Variable | Location | Default | Description |
+|----------|----------|---------|-------------|
+| `GEMINI_API_KEY` | Backend | (none) | Google Gemini API key. Falls back to curated portfolios if unset |
+| `VITE_API_URL` | Frontend | `http://localhost:8000` | Backend API URL |
 
+---
+
+## Deployment
+
+### Firebase Hosting (Frontend) + Cloud Run (Backend)
+
+**Frontend:**
 ```bash
-# 1. Install Firebase CLI (one-time)
-npm install -g firebase-tools
-
-# 2. Login to Google
-firebase login
-
-# 3. Initialize project (one-time)
-firebase init hosting
-# Select your GCP project
-# Public directory: dist
-# Single-page app: Yes
-# Don't overwrite index.html
-
-# 4. Build and deploy
+cd frontend
 npm run build
+firebase init hosting  # public dir: dist, SPA: Yes
 firebase deploy
-
-# Your site will be live at:
-# https://YOUR-PROJECT-ID.web.app
-# https://YOUR-PROJECT-ID.firebaseapp.com
 ```
 
-**Custom domain:**
+**Backend:**
 ```bash
-firebase hosting:channel:deploy production
-# Then add custom domain in Firebase Console > Hosting > Add custom domain
-```
-
-### Option B: Cloud Run (Container-based, auto-scaling)
-
-Better if you want auto-scaling, custom domains, or plan to add a backend later.
-
-```bash
-# 1. Make sure gcloud CLI is installed and configured
-gcloud auth login
-gcloud config set project YOUR-PROJECT-ID
-
-# 2. Deploy directly from source (builds in cloud)
-gcloud run deploy ai-disruption-mc \
+cd backend
+gcloud run deploy portfolio-mc-api \
   --source . \
   --region us-central1 \
   --allow-unauthenticated \
-  --port 8080 \
-  --memory 256Mi \
-  --cpu 1 \
-  --min-instances 0 \
-  --max-instances 3
-
-# Your site will be live at:
-# https://ai-disruption-mc-XXXXX-uc.a.run.app
+  --set-env-vars GEMINI_API_KEY=your-key
 ```
 
-**Custom domain on Cloud Run:**
-```bash
-gcloud beta run domain-mappings create \
-  --service ai-disruption-mc \
-  --domain your-domain.com \
-  --region us-central1
-```
+Update the frontend's `VITE_API_URL` to point to your Cloud Run URL before building.
 
-### Option C: Cloud Storage Static Hosting (Simplest, cheapest)
-
-For pure static hosting with no container overhead.
-
-```bash
-# 1. Build
-npm run build
-
-# 2. Create a bucket (name must be globally unique)
-gsutil mb -l us-central1 gs://ai-disruption-mc
-
-# 3. Upload dist folder
-gsutil -m cp -r dist/* gs://ai-disruption-mc
-
-# 4. Make public
-gsutil iam ch allUsers:objectViewer gs://ai-disruption-mc
-
-# 5. Set index page
-gsutil web set -m index.html -e index.html gs://ai-disruption-mc
-
-# Access at: https://storage.googleapis.com/ai-disruption-mc/index.html
-# For custom domain, set up a load balancer pointing to the bucket
-```
-
-## Recommendation
-
-| Method | Setup Time | Cost | Custom Domain | Auto-scaling |
-|--------|-----------|------|---------------|-------------|
-| **Firebase Hosting** | 5 min | Free tier | Easy | CDN built-in |
-| Cloud Run | 10 min | ~$0/mo idle | Moderate | Yes |
-| Cloud Storage | 15 min | ~$0.02/mo | Complex | CDN add-on |
-
-**Go with Firebase Hosting** unless you need server-side logic later.
+---
 
 ## Project Structure
 
 ```
 ai-disruption-mc/
-├── src/
-│   ├── App.jsx                        # Main simulator component + GBM engine
-│   ├── main.jsx                       # React entry point
-│   ├── components/
-│   │   ├── DecisionModal.jsx          # Policy decision UI
-│   │   └── LandscapePrompt.jsx        # Mobile orientation prompt
-│   └── utils/
-│       ├── pathsWithDecisions.js      # Decision-aware Brownian motion paths
-│       ├── decisionEngine.js          # Heuristic policy recommendations
-│       └── policyActions.js           # Policy action definitions & effects
-├── public/                            # Static assets
-├── index.html                         # HTML template
-├── vite.config.js                     # Vite build config
-├── package.json                       # Dependencies
-├── firebase.json                      # Firebase Hosting config
-├── Dockerfile                         # Cloud Run container
-├── nginx.conf                         # Nginx config for container
+├── backend/
+│   ├── app/
+│   │   ├── main.py                  # FastAPI app + CORS
+│   │   ├── api/
+│   │   │   └── routes.py            # /api/analyze-portfolio, /api/simulate
+│   │   ├── engine/
+│   │   │   ├── analyzer.py          # Gemini AI portfolio analyzer + fallbacks
+│   │   │   └── monte_carlo.py       # GBM, Merton Jump Diffusion, risk metrics
+│   │   └── models/
+│   │       └── schemas.py           # Pydantic request/response models
+│   ├── pyproject.toml               # Poetry dependencies
+│   └── README.md
+├── frontend/
+│   ├── src/
+│   │   ├── App.tsx                  # 4-step wizard state machine
+│   │   ├── api.ts                   # Backend API client
+│   │   ├── types/
+│   │   │   └── portfolio.ts         # TypeScript type definitions
+│   │   └── components/
+│   │       ├── PortfolioDescriber.tsx   # Step 1: natural language input
+│   │       ├── AnalysisReview.tsx       # Step 2: AI recommendations
+│   │       ├── SimulationConfig.tsx     # Step 3: model & parameters
+│   │       └── SimulationDashboard.tsx  # Step 4: charts & metrics
+│   ├── package.json
+│   ├── tailwind.config.js
+│   ├── vite.config.ts
+│   └── README.md
+├── docs/                            # Screenshots
 └── README.md
 ```
+
+---
+
+## Mathematical Models
+
+### Geometric Brownian Motion (GBM)
+
+```
+S(t+dt) = S(t) * exp((mu - sigma^2/2) * dt + sigma * sqrt(dt) * Z)
+```
+
+Where `mu` is drift (expected return), `sigma` is volatility, `dt = 1/12` (monthly steps), and `Z ~ N(0,1)`.
+
+### Merton Jump Diffusion
+
+```
+dS/S = (mu - lambda*k)dt + sigma*dW + J*dN
+```
+
+Where `N ~ Poisson(lambda)` governs jump arrivals, `J ~ LogNormal(mu_J, sigma_J)` governs jump sizes, and `k = exp(mu_J + sigma_J^2/2) - 1` is the jump compensation term.
+
+### Correlation
+
+Asset paths are correlated via **Cholesky decomposition** of the correlation matrix, producing correlated Brownian motions across all assets in the portfolio.
+
+### Risk Metrics
+
+- **VaR (Value at Risk)** — dollar loss at 95th/99th percentile of the loss distribution
+- **CVaR (Conditional VaR)** — expected loss beyond VaR (tail risk measure)
+- **Sharpe Ratio** — `(E[r] - r_f) / sigma` with `r_f = 4%`
+- **Max Drawdown** — worst peak-to-trough decline averaged across all paths
+
+---
+
+## License
+
+MIT
