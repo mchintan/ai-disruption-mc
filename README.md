@@ -2,7 +2,7 @@
 
 An enterprise-grade portfolio simulation platform that combines **AI-powered analysis** with **Monte Carlo methods** (GBM and Merton Jump Diffusion) to model portfolio outcomes across thousands of stochastic paths.
 
-Users describe a portfolio in plain English, review AI-recommended assets with calibrated parameters, configure simulation settings, and visualize results through interactive percentile fan charts, sample paths, and comprehensive risk metrics.
+Users describe a portfolio in plain English, review AI-recommended assets with calibrated parameters, run simulations, optimize weights, stress-test against historical crises, and execute trades through connected brokerages — all within a non-linear workspace that auto-saves experiments to IndexedDB.
 
 The platform also includes a **Historical Crisis Stress Test** mode that backtests portfolios against 6 major market crises using crisis-calibrated simulation parameters.
 
@@ -43,9 +43,9 @@ The backend is organized into **bounded context modules** — logically separate
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  React Frontend (TypeScript + Tailwind + Recharts)          │
-│  Mode: Forward Sim  |  Stress Test                          │
+│  Workspace: Build | Simulate | Backtest | Optimize | Execute│
+│  Portfolio Experiments: auto-saved to IndexedDB             │
 │  Telemetry: sendBeacon → /api/obs/event                     │
-│  Session: X-Session-ID header on all API calls              │
 └───────────────────────────┬─────────────────────────────────┘
                             │ HTTP (JSON)
                             ▼
@@ -75,7 +75,7 @@ The backend is organized into **bounded context modules** — logically separate
 
 **Backend** — Python 3.12 / FastAPI. Six bounded contexts: intake (Gemini AI analysis), portfolio (persistence), simulation (Monte Carlo + optimizer + backtest), insights (AI narratives), fulfill (export/reports), and observability (request tracing + user journey analytics). All run in a single container; scale horizontally by cloning.
 
-**Frontend** — React 18 / TypeScript / Vite. Mode switcher between Forward Simulation (4-step wizard) and Stress Test (crisis backtest). Light/dark theme toggle. Frontend telemetry via `sendBeacon`. Interactive Recharts visualizations built with Tailwind CSS.
+**Frontend** — React 18 / TypeScript / Vite. Tab-based workspace (Build, Simulate, Backtest, Optimize, Execute) with a persistent portfolio bar and experiment management. Portfolio experiments auto-saved to IndexedDB and restored on reload. Light/dark theme toggle. Frontend telemetry via `sendBeacon`. Interactive Recharts visualizations built with Tailwind CSS.
 
 ---
 
@@ -102,6 +102,9 @@ The backend is organized into **bounded context modules** — logically separate
 - **Trade Safety** — default paper trading mode, server-side `confirm` gate, encrypted token storage, PAPER/LIVE visual indicators
 - **Observability** — automatic request tracing, user journey event tracking, funnel analytics, drop-off detection, bottleneck identification
 - **Light/Dark Theme** — toggle between themes with localStorage persistence
+- **Workspace Navigation** — 5-tab hub-and-spoke UI (Build, Simulate, Backtest, Optimize, Execute) replacing the linear wizard
+- **Portfolio Experiments** — named, auto-saved experiments with IndexedDB persistence, duplicate/rename/delete
+- **Cross-Tab Data Flow** — optimizer can apply weights back to portfolio, backtest can feed into forward sim
 - **Bounded Context Architecture** — modular backend ready for microservice extraction
 
 ---
@@ -255,19 +258,25 @@ ai-disruption-mc/
 │   └── .env                                 # GEMINI_API_KEY (gitignored)
 ├── frontend/
 │   ├── src/
-│   │   ├── App.tsx                          # Mode switcher + wizard + theme toggle
+│   │   ├── App.tsx                          # Workspace shell + experiment management
 │   │   ├── api.ts                           # API client (sends X-Session-ID)
 │   │   ├── telemetry.ts                     # Frontend event tracker (sendBeacon)
+│   │   ├── store/
+│   │   │   ├── experiments.ts               # IndexedDB wrapper for portfolio experiments
+│   │   │   └── useExperiment.ts             # React hook for experiment state
 │   │   ├── types/
-│   │   │   ├── portfolio.ts                 # Simulation/backtest interfaces
+│   │   │   ├── portfolio.ts                 # Core types + PortfolioExperiment
 │   │   │   └── fulfill.ts                   # Brokerage/trade interfaces
 │   │   └── components/
-│   │       ├── PortfolioDescriber.tsx        # Step 1: describe
-│   │       ├── AnalysisReview.tsx            # Step 2: review AI recs
-│   │       ├── SimulationConfig.tsx          # Step 3: configure
-│   │       ├── SimulationDashboard.tsx       # Step 4: results + optimizer + fulfill
-│   │       ├── FulfillPanel.tsx              # Broker connect + trade list + execute
-│   │       ├── BacktestPanel.tsx             # Stress Test UI
+│   │       ├── WorkspaceTabs.tsx             # 5-tab navigation bar
+│   │       ├── PortfolioBar.tsx              # Always-visible portfolio summary strip
+│   │       ├── BuildTab.tsx                  # AI describe + asset editor (merged)
+│   │       ├── SimulateTab.tsx               # Config + results dashboard (merged)
+│   │       ├── OptimizeTab.tsx               # Weight optimization with "Apply" button
+│   │       ├── BacktestTab.tsx               # Crisis stress test
+│   │       ├── ExecuteTab.tsx                # Broker connect + trade execution
+│   │       ├── BacktestPanel.tsx             # Backtest internals
+│   │       ├── FulfillPanel.tsx              # Fulfill internals
 │   │       └── ThemeProvider.tsx             # Light/dark theme context
 │   ├── package.json
 │   └── tailwind.config.js

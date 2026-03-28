@@ -1,248 +1,172 @@
 import { useState } from "react";
-import { Sun, Moon } from "lucide-react";
+import { Sun, Moon, Plus, ChevronDown, Copy, Trash2 } from "lucide-react";
 import { ThemeProvider, useTheme } from "./components/ThemeProvider";
-import { PortfolioDescriber } from "./components/PortfolioDescriber";
-import { AnalysisReview } from "./components/AnalysisReview";
-import { SimulationConfig } from "./components/SimulationConfig";
-import { SimulationDashboard } from "./components/SimulationDashboard";
-import { BacktestPanel } from "./components/BacktestPanel";
-import { analyzePortfolio, runSimulation } from "./api";
+import { useExperiment } from "./store/useExperiment";
+import { PortfolioBar } from "./components/PortfolioBar";
+import { WorkspaceTabs } from "./components/WorkspaceTabs";
+import { BuildTab } from "./components/BuildTab";
+import { SimulateTab } from "./components/SimulateTab";
+import { BacktestTab } from "./components/BacktestTab";
+import { OptimizeTab } from "./components/OptimizeTab";
+import { ExecuteTab } from "./components/ExecuteTab";
 import { track } from "./telemetry";
-import type { AppStep, AppMode, AssetParams, AnalyzeResponse, SimulateResponse } from "./types/portfolio";
+import type { AppTab } from "./types/portfolio";
 
 function AppContent() {
   const { theme, toggleTheme } = useTheme();
-  const [mode, setMode] = useState<AppMode>("simulate");
-  const [step, setStep] = useState<AppStep>("describe");
+  const [activeTab, setActiveTab] = useState<AppTab>("build");
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [showExperiments, setShowExperiments] = useState(false);
 
-  const [analysis, setAnalysis] = useState<AnalyzeResponse | null>(null);
-  const [assets, setAssets] = useState<AssetParams[]>([]);
-  const [correlationMatrix, setCorrelationMatrix] = useState<number[][]>([]);
-  const [simulationResult, setSimulationResult] = useState<SimulateResponse | null>(null);
-  const [simulationConfig, setSimulationConfig] = useState<{
-    numSimulations: number;
-    numYears: number;
-    model: "gbm" | "merton";
-    initialInvestment: number;
-    seed: number | null;
-  } | null>(null);
+  const {
+    experiment, allExperiments, isLoaded,
+    updatePortfolio, saveSimulation, saveOptimization, saveBacktest,
+    applyOptimizedWeights, switchExperiment, createExperiment,
+    duplicateExperiment, deleteCurrentExperiment, renameExperiment,
+  } = useExperiment();
 
-  const handleDescribe = async (description: string, riskTolerance: string, horizonYears: number) => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const result = await analyzePortfolio({ description, risk_tolerance: riskTolerance, horizon_years: horizonYears });
-      setAnalysis(result);
-      setAssets(result.assets);
-      setCorrelationMatrix(result.correlation_matrix);
-      setStep("analyze");
-      track("step_completed", { context: "intake" });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Analysis failed");
-    } finally {
-      setIsLoading(false);
-    }
+  if (!isLoaded || !experiment) {
+    return <div className="min-h-screen bg-stone-50 dark:bg-slate-950 flex items-center justify-center text-stone-400 dark:text-slate-500">Loading...</div>;
+  }
+
+  const hasPortfolio = experiment.portfolio.assets.length > 0;
+  const hasSimulation = !!experiment.lastSimulation;
+
+  const handleTabChange = (tab: AppTab) => {
+    setActiveTab(tab);
+    track("tab_switched", { tab });
   };
-
-  const handleConfirmAnalysis = (confirmedAssets: AssetParams[], confirmedCorrelation: number[][]) => {
-    setAssets(confirmedAssets);
-    setCorrelationMatrix(confirmedCorrelation);
-    setStep("configure");
-    track("step_completed", { context: "portfolio" });
-  };
-
-  const handleRunSimulation = async (config: {
-    numSimulations: number;
-    numYears: number;
-    model: "gbm" | "merton";
-    initialInvestment: number;
-    seed: number | null;
-  }) => {
-    setIsLoading(true);
-    setError(null);
-    setSimulationConfig(config);
-    try {
-      const result = await runSimulation({
-        assets,
-        correlation_matrix: correlationMatrix,
-        num_simulations: config.numSimulations,
-        num_years: config.numYears,
-        model: config.model,
-        initial_investment: config.initialInvestment,
-        seed: config.seed,
-      });
-      setSimulationResult(result);
-      setStep("simulate");
-      track("step_completed", { context: "simulation" });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Simulation failed");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleRestart = () => {
-    track("flow_restarted");
-    setStep("describe");
-    setAnalysis(null);
-    setAssets([]);
-    setCorrelationMatrix([]);
-    setSimulationResult(null);
-    setSimulationConfig(null);
-    setError(null);
-  };
-
-  const steps: { key: AppStep; label: string; num: number }[] = [
-    { key: "describe", label: "Describe", num: 1 },
-    { key: "analyze", label: "Analyze", num: 2 },
-    { key: "configure", label: "Configure", num: 3 },
-    { key: "simulate", label: "Simulate", num: 4 },
-  ];
-
-  const stepOrder: AppStep[] = ["describe", "analyze", "configure", "simulate"];
-  const currentIdx = stepOrder.indexOf(step);
 
   return (
-    <div className="min-h-screen bg-stone-50 text-stone-900 dark:bg-slate-950 dark:text-slate-100 transition-colors">
+    <div className="min-h-screen bg-stone-50 dark:bg-slate-950 text-stone-900 dark:text-slate-100 transition-colors">
       {/* Header */}
-      <header className="border-b border-stone-200 bg-white/80 dark:border-slate-800/50 dark:bg-slate-950/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-500 to-teal-700 dark:from-cyan-400 dark:to-blue-500 flex items-center justify-center text-white font-bold text-sm">
-              MC
-            </div>
-            <div>
-              <h1 className="text-sm font-bold text-stone-900 dark:text-slate-100">Portfolio Monte Carlo</h1>
-              <p className="text-xs text-stone-500 dark:text-slate-500">Enterprise Simulator</p>
-            </div>
-          </div>
-
+      <header className="border-b border-stone-200 dark:border-slate-800/50 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            {/* Mode Switcher */}
-            <div className="flex items-center bg-stone-100 dark:bg-slate-800/50 rounded-lg p-0.5">
-              <button
-                onClick={() => setMode("simulate")}
-                className={`px-3 py-1.5 rounded-md text-xs font-mono font-semibold transition-all ${
-                  mode === "simulate"
-                    ? "bg-white text-teal-700 shadow-sm dark:bg-slate-700 dark:text-cyan-400"
-                    : "text-stone-500 hover:text-stone-700 dark:text-slate-500 dark:hover:text-slate-300"
-                }`}
-              >
-                Forward Sim
-              </button>
-              <button
-                onClick={() => { setMode("backtest"); track("mode_switched", { mode: "backtest" }); }}
-                className={`px-3 py-1.5 rounded-md text-xs font-mono font-semibold transition-all ${
-                  mode === "backtest"
-                    ? "bg-white text-red-700 shadow-sm dark:bg-slate-700 dark:text-red-400"
-                    : "text-stone-500 hover:text-stone-700 dark:text-slate-500 dark:hover:text-slate-300"
-                }`}
-              >
-                Stress Test
-              </button>
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-teal-500 to-teal-700 dark:from-cyan-400 dark:to-blue-500 flex items-center justify-center text-white font-bold text-sm">MC</div>
+              <div>
+                <h1 className="text-sm font-bold text-stone-900 dark:text-slate-100">Portfolio Monte Carlo</h1>
+                <p className="text-xs text-stone-400 dark:text-slate-500">Enterprise Simulator</p>
+              </div>
             </div>
 
-            {/* Step Progress (only in simulate mode) */}
-            {mode === "simulate" && (
-            <div className="flex items-center gap-1">
-              {steps.map((s, i) => (
-                <div key={s.key} className="flex items-center">
-                  <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-mono transition-colors ${
-                    i <= currentIdx
-                      ? i === currentIdx
-                        ? "bg-teal-50 text-teal-700 border border-teal-200 dark:bg-cyan-500/15 dark:text-cyan-400 dark:border-cyan-500/30"
-                        : "text-teal-600/60 dark:text-cyan-500/60"
-                      : "text-stone-400 dark:text-slate-600"
-                  }`}>
-                    <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                      i < currentIdx
-                        ? "bg-teal-600 text-white dark:bg-cyan-500 dark:text-slate-950"
-                        : i === currentIdx
-                        ? "bg-teal-100 text-teal-700 dark:bg-cyan-500/20 dark:text-cyan-400"
-                        : "bg-stone-100 text-stone-400 dark:bg-slate-800 dark:text-slate-600"
-                    }`}>
-                      {i < currentIdx ? "\u2713" : s.num}
-                    </span>
-                    <span className="hidden sm:inline">{s.label}</span>
+            {/* Experiment Selector */}
+            <div className="relative ml-4">
+              <button
+                onClick={() => setShowExperiments(!showExperiments)}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-stone-100 dark:bg-slate-800/50 border border-stone-200 dark:border-slate-700/50 text-sm"
+              >
+                <span className="font-medium text-stone-700 dark:text-slate-300 max-w-[200px] truncate">{experiment.name}</span>
+                <ChevronDown className="w-3.5 h-3.5 text-stone-400 dark:text-slate-500" />
+              </button>
+
+              {showExperiments && (
+                <div className="absolute top-full left-0 mt-1 w-72 bg-white dark:bg-slate-900 border border-stone-200 dark:border-slate-700/50 rounded-xl shadow-xl z-50 py-2">
+                  {allExperiments.map(exp => (
+                    <button
+                      key={exp.id}
+                      onClick={() => { switchExperiment(exp.id); setShowExperiments(false); }}
+                      className={`w-full text-left px-4 py-2 text-sm hover:bg-stone-50 dark:hover:bg-slate-800/50 ${exp.id === experiment.id ? "bg-stone-50 dark:bg-slate-800/50 font-medium" : ""}`}
+                    >
+                      <div className="text-stone-700 dark:text-slate-300 truncate">{exp.name}</div>
+                      <div className="text-xs text-stone-400 dark:text-slate-500">
+                        {exp.portfolio.assets.length} assets &middot; {new Date(exp.updatedAt).toLocaleDateString()}
+                      </div>
+                    </button>
+                  ))}
+                  <div className="border-t border-stone-100 dark:border-slate-800 mt-1 pt-1">
+                    <button onClick={() => { createExperiment(); setShowExperiments(false); }} className="w-full text-left px-4 py-2 text-sm text-teal-600 dark:text-cyan-400 hover:bg-stone-50 dark:hover:bg-slate-800/50 flex items-center gap-2">
+                      <Plus className="w-3.5 h-3.5" /> New Experiment
+                    </button>
+                    <button onClick={() => { duplicateExperiment(); setShowExperiments(false); }} className="w-full text-left px-4 py-2 text-sm text-stone-500 dark:text-slate-400 hover:bg-stone-50 dark:hover:bg-slate-800/50 flex items-center gap-2">
+                      <Copy className="w-3.5 h-3.5" /> Duplicate Current
+                    </button>
+                    {allExperiments.length > 1 && (
+                      <button onClick={() => { deleteCurrentExperiment(); setShowExperiments(false); }} className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-stone-50 dark:hover:bg-slate-800/50 flex items-center gap-2">
+                        <Trash2 className="w-3.5 h-3.5" /> Delete Current
+                      </button>
+                    )}
                   </div>
-                  {i < steps.length - 1 && (
-                    <div className={`w-6 h-px mx-1 ${i < currentIdx ? "bg-teal-400/40 dark:bg-cyan-500/40" : "bg-stone-200 dark:bg-slate-700/30"}`} />
-                  )}
                 </div>
-              ))}
-            </div>
-            )}
-
-            {/* Theme Toggle */}
-            <button
-              onClick={toggleTheme}
-              className="p-2 rounded-lg border border-stone-200 bg-white hover:bg-stone-50 dark:border-slate-700/50 dark:bg-slate-800/50 dark:hover:bg-slate-800 transition-colors"
-              aria-label="Toggle theme"
-            >
-              {theme === "dark" ? (
-                <Sun className="w-4 h-4 text-slate-400" />
-              ) : (
-                <Moon className="w-4 h-4 text-stone-500" />
               )}
-            </button>
+            </div>
           </div>
+
+          <button onClick={toggleTheme} className="p-2 rounded-lg border border-stone-200 bg-white hover:bg-stone-50 dark:border-slate-700/50 dark:bg-slate-800/50 dark:hover:bg-slate-800 transition-colors" aria-label="Toggle theme">
+            {theme === "dark" ? <Sun className="w-4 h-4 text-slate-400" /> : <Moon className="w-4 h-4 text-stone-500" />}
+          </button>
         </div>
       </header>
 
-      {/* Error Banner */}
-      {error && (
-        <div className="max-w-6xl mx-auto px-6 mt-4">
-          <div className="bg-red-50 border border-red-200 dark:bg-red-500/10 dark:border-red-500/20 rounded-xl px-4 py-3 text-red-600 dark:text-red-400 text-sm flex items-center justify-between">
-            <span>{error}</span>
-            <button onClick={() => setError(null)} className="text-red-400/60 hover:text-red-500 dark:hover:text-red-400">
-              &times;
-            </button>
-          </div>
-        </div>
+      {/* Portfolio Bar */}
+      {hasPortfolio && (
+        <PortfolioBar
+          assets={experiment.portfolio.assets}
+          totalAllocation={experiment.portfolio.assets.reduce((s, a) => s + a.allocation_pct, 0)}
+          onEditClick={() => setActiveTab("build")}
+        />
       )}
 
-      {/* Main Content */}
-      <main className="max-w-6xl mx-auto px-6 py-10">
-        {mode === "backtest" ? (
-          <BacktestPanel />
-        ) : (
-          <>
-            {step === "describe" && (
-              <PortfolioDescriber onSubmit={handleDescribe} isLoading={isLoading} />
-            )}
-            {step === "analyze" && analysis && (
-              <AnalysisReview analysis={analysis} onConfirm={handleConfirmAnalysis} onBack={() => setStep("describe")} />
-            )}
-            {step === "configure" && (
-              <SimulationConfig
-                assets={assets}
-                correlationMatrix={correlationMatrix}
-                onRun={handleRunSimulation}
-                onBack={() => setStep("analyze")}
-                isLoading={isLoading}
-              />
-            )}
-            {step === "simulate" && simulationResult && simulationConfig && (
-              <SimulationDashboard
-                result={simulationResult}
-                simulationConfig={{
-                  assets,
-                  correlationMatrix,
-                  ...simulationConfig,
-                }}
-                onBack={() => setStep("configure")}
-                onRestart={handleRestart}
-              />
-            )}
-          </>
+      {/* Tabs */}
+      <div className="max-w-7xl mx-auto px-6 pt-4">
+        <WorkspaceTabs
+          activeTab={activeTab}
+          onTabChange={handleTabChange}
+          hasPortfolio={hasPortfolio}
+          hasSimulation={hasSimulation}
+        />
+      </div>
+
+      {/* Tab Content */}
+      <main className="max-w-7xl mx-auto px-6 py-6">
+        {activeTab === "build" && (
+          <BuildTab
+            assets={experiment.portfolio.assets}
+            correlationMatrix={experiment.portfolio.correlationMatrix}
+            description={experiment.portfolio.description}
+            riskTolerance={experiment.portfolio.riskTolerance}
+            onPortfolioChange={updatePortfolio}
+            isLoading={isLoading}
+          />
+        )}
+        {activeTab === "simulate" && (
+          <SimulateTab
+            assets={experiment.portfolio.assets}
+            correlationMatrix={experiment.portfolio.correlationMatrix}
+            lastSimulation={experiment.lastSimulation}
+            onSimulationComplete={saveSimulation}
+          />
+        )}
+        {activeTab === "backtest" && (
+          <BacktestTab
+            assets={experiment.portfolio.assets}
+            lastBacktest={experiment.lastBacktest}
+            onBacktestComplete={saveBacktest}
+            onUseInPortfolio={(assets) => { updatePortfolio(assets, experiment.portfolio.correlationMatrix); setActiveTab("build"); }}
+          />
+        )}
+        {activeTab === "optimize" && (
+          <OptimizeTab
+            assets={experiment.portfolio.assets}
+            correlationMatrix={experiment.portfolio.correlationMatrix}
+            lastSimulation={experiment.lastSimulation}
+            lastOptimization={experiment.lastOptimization}
+            onOptimizationComplete={saveOptimization}
+            onApplyWeights={() => { applyOptimizedWeights(); setActiveTab("build"); }}
+          />
+        )}
+        {activeTab === "execute" && (
+          <ExecuteTab
+            assets={experiment.portfolio.assets}
+            investmentAmount={experiment.lastSimulation?.config.initialInvestment ?? 100000}
+          />
         )}
       </main>
 
       {/* Footer */}
       <footer className="border-t border-stone-200 dark:border-slate-800/30 py-6 text-center text-xs text-stone-400 dark:text-slate-600 font-mono">
-        Monte Carlo Portfolio Simulator &middot; GBM & Merton Jump Diffusion
+        Portfolio Monte Carlo Simulator &middot; GBM & Merton Jump Diffusion
       </footer>
     </div>
   );
