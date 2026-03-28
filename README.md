@@ -63,8 +63,9 @@ The backend is organized into **bounded context modules** — logically separate
 │  ┌──────────┐ ┌─────────────────────────────────────┐      │
 │  │ Fulfill  │ │ Observability (cross-cutting)       │      │
 │  │          │ │ Request tracing → SQLite             │      │
-│  │ export   │ │ Journey events → funnel, drop-offs   │      │
-│  │ reports  │ │ /api/obs/* query endpoints           │      │
+│  │ broker   │ │ Journey events → funnel, drop-offs   │      │
+│  │ trades   │ │ /api/obs/* query endpoints           │      │
+│  │ execute  │ │                                      │      │
 │  └──────────┘ └─────────────────────────────────────┘      │
 │                                                             │
 │  Shared: engine/monte_carlo.py (GBM, Merton, Cholesky)     │
@@ -96,6 +97,9 @@ The backend is organized into **bounded context modules** — logically separate
 - **Crisis-Calibrated Parameters** — per-asset drift, volatility, jump intensity, and correlation overrides matched to historical behavior
 - **Backtest Analytics** — equity curve with confidence bands, drawdown analysis, per-asset breakdown, sample paths, returns histogram, Sharpe/Sortino/Calmar ratios, VaR, recovery time
 - **Portfolio Presets** — Balanced, Aggressive Growth, Conservative, Crypto Heavy, Equity Only
+- **Brokerage Integration** — connect Alpaca (or IBKR) via OAuth, generate trade lists from target allocations vs current holdings, and execute with one click
+- **Provider Abstraction** — clean `BrokerProvider` interface for adding new brokers (one file + one registry line)
+- **Trade Safety** — default paper trading mode, server-side `confirm` gate, encrypted token storage, PAPER/LIVE visual indicators
 - **Observability** — automatic request tracing, user journey event tracking, funnel analytics, drop-off detection, bottleneck identification
 - **Light/Dark Theme** — toggle between themes with localStorage persistence
 - **Bounded Context Architecture** — modular backend ready for microservice extraction
@@ -177,6 +181,10 @@ The app will be available at `http://localhost:5173`.
 |----------|----------|---------|-------------|
 | `GEMINI_API_KEY` | Backend `.env` | (none) | Google Gemini API key. Falls back to curated portfolios if unset |
 | `VITE_API_URL` | Frontend | `http://localhost:8000` | Backend API URL |
+| `ALPACA_CLIENT_ID` | Backend `.env` | (none) | Alpaca OAuth client ID (from https://app.alpaca.markets/brokerage/apps) |
+| `ALPACA_CLIENT_SECRET` | Backend `.env` | (none) | Alpaca OAuth client secret |
+| `DEFAULT_TRADING_MODE` | Backend `.env` | `paper` | `paper` for sandbox, `live` for real money |
+| `TOKEN_ENCRYPTION_KEY` | Backend `.env` | (auto-gen) | Fernet key for encrypting stored OAuth tokens |
 | `OTEL_EXPORTER_ENDPOINT` | Backend `.env` | (none) | OTLP collector endpoint. When set, telemetry exports via gRPC instead of local SQLite |
 
 ---
@@ -225,7 +233,13 @@ ai-disruption-mc/
 │   │   │   │   ├── narrator.py              # AI narrative generation (Gemini)
 │   │   │   │   └── router.py                # Explain endpoints (placeholder)
 │   │   │   ├── fulfill/
-│   │   │   │   └── router.py                # Export/report endpoints (placeholder)
+│   │   │   │   ├── router.py                # OAuth, trade list, execute, order status
+│   │   │   │   ├── schemas.py               # Fulfill-specific Pydantic models
+│   │   │   │   ├── trade_generator.py       # Target vs current → buy/sell list
+│   │   │   │   ├── token_store.py           # Encrypted OAuth token storage (Fernet + SQLite)
+│   │   │   │   └── providers/
+│   │   │   │       ├── base.py              # BrokerProvider ABC
+│   │   │   │       └── alpaca.py            # Alpaca REST API adapter
 │   │   │   └── observability/
 │   │   │       ├── middleware.py             # Request tracing middleware
 │   │   │       ├── journey.py               # Event emitter + SQLite store
@@ -245,13 +259,15 @@ ai-disruption-mc/
 │   │   ├── api.ts                           # API client (sends X-Session-ID)
 │   │   ├── telemetry.ts                     # Frontend event tracker (sendBeacon)
 │   │   ├── types/
-│   │   │   └── portfolio.ts                 # TypeScript interfaces
+│   │   │   ├── portfolio.ts                 # Simulation/backtest interfaces
+│   │   │   └── fulfill.ts                   # Brokerage/trade interfaces
 │   │   └── components/
-│   │       ├── BacktestPanel.tsx             # Stress Test UI
 │   │       ├── PortfolioDescriber.tsx        # Step 1: describe
 │   │       ├── AnalysisReview.tsx            # Step 2: review AI recs
 │   │       ├── SimulationConfig.tsx          # Step 3: configure
-│   │       ├── SimulationDashboard.tsx       # Step 4: results + optimizer
+│   │       ├── SimulationDashboard.tsx       # Step 4: results + optimizer + fulfill
+│   │       ├── FulfillPanel.tsx              # Broker connect + trade list + execute
+│   │       ├── BacktestPanel.tsx             # Stress Test UI
 │   │       └── ThemeProvider.tsx             # Light/dark theme context
 │   ├── package.json
 │   └── tailwind.config.js

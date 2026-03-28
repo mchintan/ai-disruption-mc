@@ -5,6 +5,7 @@ import type {
   OptimizeRequest, OptimizeResponse,
   SimulateRequest, SimulateResponse,
 } from "./types/portfolio";
+import type { BrokerType, BrokerConnectionStatus, TradeListRequest, TradeListResponse, ExecuteTradesRequest, ExecuteTradesResponse, OrderStatusItem } from "./types/fulfill";
 import { getSessionId } from "./telemetry";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
@@ -83,5 +84,55 @@ export async function runBacktest(request: BacktestRequest): Promise<BacktestRes
     const err = await res.text();
     throw new Error(`Backtest failed: ${err}`);
   }
+  return res.json();
+}
+
+export async function initOAuth(broker: BrokerType): Promise<{ auth_url: string; state: string }> {
+  const res = await fetch(`${API_BASE}/api/fulfill/oauth/init`, {
+    method: "POST",
+    headers: headers(),
+    body: JSON.stringify({ broker }),
+  });
+  if (!res.ok) throw new Error(`OAuth init failed: ${await res.text()}`);
+  return res.json();
+}
+
+export async function checkBrokerConnection(broker: BrokerType): Promise<BrokerConnectionStatus> {
+  const res = await fetch(`${API_BASE}/api/fulfill/connection/${broker}`, { headers: headers() });
+  if (!res.ok) throw new Error(`Connection check failed: ${await res.text()}`);
+  return res.json();
+}
+
+export async function disconnectBroker(broker: BrokerType): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/fulfill/connection/${broker}`, {
+    method: "DELETE",
+    headers: headers(),
+  });
+  if (!res.ok) throw new Error(`Disconnect failed: ${await res.text()}`);
+}
+
+export async function generateTradeList(request: TradeListRequest): Promise<TradeListResponse> {
+  const res = await fetch(`${API_BASE}/api/fulfill/trade-list`, {
+    method: "POST",
+    headers: headers(),
+    body: JSON.stringify(request),
+  });
+  if (!res.ok) throw new Error(`Trade list generation failed: ${await res.text()}`);
+  return res.json();
+}
+
+export async function executeTrades(request: ExecuteTradesRequest): Promise<ExecuteTradesResponse> {
+  const res = await fetch(`${API_BASE}/api/fulfill/execute`, {
+    method: "POST",
+    headers: headers(),
+    body: JSON.stringify(request),
+  });
+  if (!res.ok) throw new Error(`Trade execution failed: ${await res.text()}`);
+  return res.json();
+}
+
+export async function getOrderStatus(broker: BrokerType): Promise<OrderStatusItem[]> {
+  const res = await fetch(`${API_BASE}/api/fulfill/orders/${broker}`, { headers: headers() });
+  if (!res.ok) throw new Error(`Order status check failed: ${await res.text()}`);
   return res.json();
 }

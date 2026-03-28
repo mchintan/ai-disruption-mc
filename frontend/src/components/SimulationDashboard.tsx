@@ -6,6 +6,7 @@ import {
 } from "recharts";
 import { useTheme } from "./ThemeProvider";
 import { optimizeWeights } from "../api";
+import { FulfillPanel } from "./FulfillPanel";
 import type { AssetParams, SimulateResponse, OptimizeResponse, OptimizationObjective } from "../types/portfolio";
 
 interface Props {
@@ -346,6 +347,12 @@ export function SimulationDashboard({ result, simulationConfig, onBack, onRestar
           </div>
         )}
       </div>
+
+      {/* Execute Portfolio Section */}
+      <FulfillPanel
+        targets={asset_results.map(a => ({ ticker: a.ticker, name: a.name, target_pct: a.allocation_pct }))}
+        investmentAmount={result.initial_investment}
+      />
 
       <div className="flex gap-3">
         <button onClick={onBack} className="px-6 py-3 rounded-xl border border-stone-200 text-stone-500 hover:text-stone-700 dark:border-slate-700/50 dark:text-slate-400 dark:hover:text-slate-200 transition-colors text-sm flex items-center gap-2">
