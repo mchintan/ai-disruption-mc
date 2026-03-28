@@ -15,14 +15,14 @@ import type { AppTab } from "./types/portfolio";
 function AppContent() {
   const { theme, toggleTheme } = useTheme();
   const [activeTab, setActiveTab] = useState<AppTab>("build");
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading] = useState(false);
   const [showExperiments, setShowExperiments] = useState(false);
 
   const {
     experiment, allExperiments, isLoaded,
     updatePortfolio, saveSimulation, saveOptimization, saveBacktest,
     applyOptimizedWeights, switchExperiment, createExperiment,
-    duplicateExperiment, deleteCurrentExperiment, renameExperiment,
+    duplicateExperiment, deleteCurrentExperiment,
   } = useExperiment();
 
   if (!isLoaded || !experiment) {

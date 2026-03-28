@@ -8,8 +8,9 @@ interface Props {
   onUseInPortfolio: (assets: AssetParams[]) => void;
 }
 
+// BacktestPanel is self-contained with its own state management.
+// In a future iteration we will pass props to pre-populate from current portfolio.
 export function BacktestTab(_props: Props) {
-  // BacktestPanel is self-contained with its own state management.
-  // In a future iteration we will pass props to pre-populate from current portfolio.
+  void _props;
   return <BacktestPanel />;
 }
