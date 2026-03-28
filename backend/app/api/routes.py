@@ -1,10 +1,13 @@
 from fastapi import APIRouter
 
-from app.engine.analyzer import analyze_portfolio
+from app.engine.analyzer import analyze_portfolio, explain_optimization
 from app.engine.monte_carlo import run_simulation
+from app.engine.optimizer import optimize_weights
 from app.models.schemas import (
     AnalyzeRequest,
     AnalyzeResponse,
+    OptimizeRequest,
+    OptimizeResponse,
     SimulateRequest,
     SimulateResponse,
 )
@@ -38,3 +41,38 @@ def simulate(request: SimulateRequest) -> SimulateResponse:
         seed=request.seed,
     )
     return SimulateResponse(**result)
+
+
+@router.post("/optimize-weights", response_model=OptimizeResponse)
+def optimize(request: OptimizeRequest) -> OptimizeResponse:
+    """Find optimal portfolio weights via Monte Carlo optimization."""
+    assets = [a.model_dump() for a in request.assets]
+
+    result = optimize_weights(
+        assets=assets,
+        correlation_matrix=request.correlation_matrix,
+        num_simulations_trial=200,
+        num_simulations_final=request.num_simulations,
+        num_years=request.num_years,
+        model=request.model,
+        initial_investment=request.initial_investment,
+        objective=request.objective,
+        seed=request.seed,
+    )
+
+    narrative = explain_optimization(
+        weights=result["weights"],
+        original_metrics=result["original_risk_metrics"],
+        optimized_metrics=result["optimized_risk_metrics"],
+        objective=request.objective,
+    )
+
+    return OptimizeResponse(
+        weights=result["weights"],
+        original_risk_metrics=result["original_risk_metrics"],
+        optimized_risk_metrics=result["optimized_risk_metrics"],
+        objective=result["objective"],
+        converged=result["converged"],
+        narrative=narrative,
+        optimized_simulation=result["optimized_simulation"],
+    )

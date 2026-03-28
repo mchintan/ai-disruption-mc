@@ -1,7 +1,12 @@
+from pathlib import Path
+
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes import router
+
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
 app = FastAPI(title="Portfolio Monte Carlo Simulator", version="1.0.0")
 

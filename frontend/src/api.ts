@@ -1,4 +1,4 @@
-import type { AnalyzeRequest, AnalyzeResponse, SimulateRequest, SimulateResponse } from "./types/portfolio";
+import type { AnalyzeRequest, AnalyzeResponse, OptimizeRequest, OptimizeResponse, SimulateRequest, SimulateResponse } from "./types/portfolio";
 
 const API_BASE = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
@@ -24,6 +24,19 @@ export async function runSimulation(request: SimulateRequest): Promise<SimulateR
   if (!res.ok) {
     const err = await res.text();
     throw new Error(`Simulation failed: ${err}`);
+  }
+  return res.json();
+}
+
+export async function optimizeWeights(request: OptimizeRequest): Promise<OptimizeResponse> {
+  const res = await fetch(`${API_BASE}/api/optimize-weights`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(request),
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Optimization failed: ${err}`);
   }
   return res.json();
 }

@@ -75,3 +75,38 @@ export interface SimulateResponse {
 }
 
 export type AppStep = "describe" | "analyze" | "configure" | "simulate";
+
+export type OptimizationObjective =
+  | "max_sharpe"
+  | "min_var"
+  | "min_cvar"
+  | "min_max_drawdown"
+  | "max_return";
+
+export interface OptimizeRequest {
+  assets: AssetParams[];
+  correlation_matrix: number[][];
+  num_simulations: number;
+  num_years: number;
+  model: "gbm" | "merton";
+  initial_investment: number;
+  objective: OptimizationObjective;
+  seed: number | null;
+}
+
+export interface WeightResult {
+  ticker: string;
+  name: string;
+  original_pct: number;
+  optimal_pct: number;
+}
+
+export interface OptimizeResponse {
+  weights: WeightResult[];
+  original_risk_metrics: RiskMetrics;
+  optimized_risk_metrics: RiskMetrics;
+  objective: string;
+  converged: boolean;
+  narrative: string;
+  optimized_simulation: SimulateResponse;
+}
