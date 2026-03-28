@@ -94,3 +94,33 @@ class SimulateResponse(BaseModel):
     num_simulations: int
     num_years: int
     initial_investment: float
+
+
+class OptimizeRequest(BaseModel):
+    assets: list[AssetParams]
+    correlation_matrix: list[list[float]] = Field(default_factory=list)
+    num_simulations: int = Field(default=500, ge=50, le=5000)
+    num_years: int = Field(default=10, ge=1, le=30)
+    model: str = Field(default="merton")
+    initial_investment: float = Field(default=100000, gt=0)
+    objective: str = Field(
+        description="Optimization objective: max_sharpe, min_var, min_cvar, min_max_drawdown, max_return"
+    )
+    seed: Optional[int] = Field(default=42)
+
+
+class WeightResult(BaseModel):
+    ticker: str
+    name: str
+    original_pct: float
+    optimal_pct: float
+
+
+class OptimizeResponse(BaseModel):
+    weights: list[WeightResult]
+    original_risk_metrics: RiskMetrics
+    optimized_risk_metrics: RiskMetrics
+    objective: str
+    converged: bool
+    narrative: str
+    optimized_simulation: SimulateResponse
