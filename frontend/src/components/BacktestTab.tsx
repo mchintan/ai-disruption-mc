@@ -8,8 +8,9 @@ interface Props {
   onUseInPortfolio: (assets: AssetParams[]) => void;
 }
 
-export function BacktestTab(_: Props) {
-  // BacktestPanel is self-contained with its own state management.
-  // In a future iteration we will pass props to pre-populate from current portfolio.
+// BacktestPanel is self-contained with its own state management.
+// In a future iteration we will pass props to pre-populate from current portfolio.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function BacktestTab(props: Props) {
   return <BacktestPanel />;
 }
