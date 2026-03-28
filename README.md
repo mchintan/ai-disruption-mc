@@ -6,6 +6,40 @@ Users describe a portfolio in plain English, review AI-recommended assets with c
 
 ---
 
+## Screenshots
+
+### Build Tab — AI Portfolio Generator + Asset Editor
+Describe your portfolio in plain English. AI recommends assets with calibrated parameters. Edit allocations, drift, volatility, and jump parameters. Portfolio bar shows current allocations at all times.
+
+![Build Tab](docs/tab-build.png)
+
+### Simulate Tab — Monte Carlo Results
+Run simulations with GBM or Merton Jump Diffusion. View metric cards (median terminal value, VaR, Sharpe, max drawdown), percentile fan charts, and sample simulation paths.
+
+![Simulate Tab](docs/tab-simulate.png)
+
+### Backtest Tab — Historical Crisis Stress Test
+Test portfolios against 6 historical market crises. View equity curves, drawdown analysis, per-asset breakdown, returns histogram, and detailed statistics.
+
+![Backtest Tab](docs/tab-backtest.png)
+
+### Optimize Tab — Weight Optimization
+Find optimal weights across 5 objectives (max Sharpe, min VaR, min CVaR, min drawdown, max return). Apply optimized weights back to the portfolio with one click.
+
+![Optimize Tab](docs/tab-optimize.png)
+
+### Execute Tab — Brokerage Integration
+Connect a broker via OAuth, generate trade lists from target vs current holdings, and execute orders with safety gates.
+
+![Execute Tab](docs/tab-execute.png)
+
+### Dark Mode
+Full dark theme with the original slate/cyan palette.
+
+![Dark Mode](docs/dark-mode.png)
+
+---
+
 ## How It Works
 
 The app is organized as a **workspace** with five tabs. A persistent portfolio bar shows the active portfolio at all times, and users can jump between tabs freely without losing state.
