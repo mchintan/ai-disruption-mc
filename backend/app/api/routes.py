@@ -13,7 +13,7 @@ router = APIRouter(prefix="/api")
 
 
 @router.post("/analyze-portfolio", response_model=AnalyzeResponse)
-async def analyze(request: AnalyzeRequest) -> AnalyzeResponse:
+def analyze(request: AnalyzeRequest) -> AnalyzeResponse:
     """Analyze a natural language portfolio description and return AI recommendations."""
     result = analyze_portfolio(
         description=request.description,
@@ -24,7 +24,7 @@ async def analyze(request: AnalyzeRequest) -> AnalyzeResponse:
 
 
 @router.post("/simulate", response_model=SimulateResponse)
-async def simulate(request: SimulateRequest) -> SimulateResponse:
+def simulate(request: SimulateRequest) -> SimulateResponse:
     """Run Monte Carlo simulation on a configured portfolio."""
     assets = [a.model_dump() for a in request.assets]
 

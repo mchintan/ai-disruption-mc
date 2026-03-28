@@ -85,8 +85,8 @@ export function SimulationDashboard({ result, onBack, onRestart }: Props) {
         />
         <MetricCard
           label="VaR (95%)"
-          value={formatPct(risk.var_95)}
-          sub="Annual worst-case loss"
+          value={formatCurrency(risk.var_95)}
+          sub="Worst-case loss at 95% confidence"
           color="amber"
           icon={<TrendingDown className="w-4 h-4" />}
         />
@@ -178,9 +178,9 @@ export function SimulationDashboard({ result, onBack, onRestart }: Props) {
           <RiskRow label="Expected Annual Return" value={formatPct(risk.expected_return)} />
           <RiskRow label="Annual Volatility" value={formatPct(risk.volatility)} />
           <RiskRow label="Sharpe Ratio" value={risk.sharpe_ratio.toFixed(3)} />
-          <RiskRow label="VaR 95%" value={formatPct(risk.var_95)} />
-          <RiskRow label="VaR 99%" value={formatPct(risk.var_99)} />
-          <RiskRow label="CVaR 95% (Expected Shortfall)" value={formatPct(risk.cvar_95)} />
+          <RiskRow label="VaR 95%" value={formatCurrency(risk.var_95)} />
+          <RiskRow label="VaR 99%" value={formatCurrency(risk.var_99)} />
+          <RiskRow label="CVaR 95% (Expected Shortfall)" value={formatCurrency(risk.cvar_95)} />
           <RiskRow label="Max Drawdown" value={formatPct(risk.max_drawdown)} />
           <RiskRow label="Median Terminal Value" value={formatCurrency(risk.median_terminal)} />
           <RiskRow label="Mean Terminal Value" value={formatCurrency(risk.mean_terminal)} />
