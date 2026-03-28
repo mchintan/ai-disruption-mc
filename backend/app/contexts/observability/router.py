@@ -64,6 +64,8 @@ class FrontendEvent(BaseModel):
     event: str
     session: str = ""
     ts: Optional[float] = None
+    context: str = "frontend"
+    attrs: dict = {}
 
 
 @router.get("/funnel", response_model=FunnelResponse)
@@ -224,8 +226,9 @@ def receive_frontend_event(event: FrontendEvent):
     """Receive a journey event from the frontend."""
     emit(
         event.event,
-        context="frontend",
+        context=event.context,
         session=event.session,
         ts_client=event.ts or 0,
+        **event.attrs,
     )
     return {"status": "ok"}

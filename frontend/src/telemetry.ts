@@ -10,6 +10,8 @@ function getSessionId(): string {
   return _sessionId;
 }
 
+export { getSessionId };
+
 export function track(event: string, data?: Record<string, unknown>): void {
   try {
     const payload = JSON.stringify({
