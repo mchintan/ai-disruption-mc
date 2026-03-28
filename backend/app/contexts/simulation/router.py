@@ -1,4 +1,5 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Header
+from typing import Optional
 from app.contexts.observability.journey import emit
 from app.engine.backtest import BACKTEST_ASSETS, CRISIS_PERIODS, run_backtest
 from app.engine.monte_carlo import run_simulation
@@ -12,8 +13,12 @@ from app.models.schemas import (
 
 router = APIRouter(prefix="/api", tags=["simulation"])
 
+
 @router.post("/simulate", response_model=SimulateResponse)
-def simulate(request: SimulateRequest) -> SimulateResponse:
+def simulate(
+    request: SimulateRequest,
+    x_session_id: Optional[str] = Header(default="", alias="X-Session-ID"),
+) -> SimulateResponse:
     """Run Monte Carlo simulation on a configured portfolio."""
     assets = [a.model_dump() for a in request.assets]
     result = run_simulation(
@@ -25,11 +30,16 @@ def simulate(request: SimulateRequest) -> SimulateResponse:
         initial_investment=request.initial_investment,
         seed=request.seed,
     )
-    emit("simulation_completed", context="simulation", model=request.model, num_sims=request.num_simulations)
+    emit("step_completed", context="simulation", session=x_session_id,
+         action="simulate", model=request.model, num_sims=request.num_simulations)
     return SimulateResponse(**result)
 
+
 @router.post("/optimize-weights", response_model=OptimizeResponse)
-def optimize(request: OptimizeRequest) -> OptimizeResponse:
+def optimize(
+    request: OptimizeRequest,
+    x_session_id: Optional[str] = Header(default="", alias="X-Session-ID"),
+) -> OptimizeResponse:
     """Find optimal portfolio weights via Monte Carlo optimization."""
     assets = [a.model_dump() for a in request.assets]
     result = optimize_weights(
@@ -49,7 +59,8 @@ def optimize(request: OptimizeRequest) -> OptimizeResponse:
         optimized_metrics=result["optimized_risk_metrics"],
         objective=request.objective,
     )
-    emit("optimization_completed", context="simulation", objective=request.objective, converged=result["converged"])
+    emit("step_completed", context="simulation", session=x_session_id,
+         action="optimize", objective=request.objective, converged=result["converged"])
     return OptimizeResponse(
         weights=result["weights"],
         original_risk_metrics=result["original_risk_metrics"],
@@ -59,6 +70,7 @@ def optimize(request: OptimizeRequest) -> OptimizeResponse:
         narrative=narrative,
         optimized_simulation=result["optimized_simulation"],
     )
+
 
 @router.get("/crisis-periods", response_model=list[CrisisPeriodSummary])
 def list_crisis_periods() -> list[CrisisPeriodSummary]:
@@ -72,13 +84,18 @@ def list_crisis_periods() -> list[CrisisPeriodSummary]:
         for c in CRISIS_PERIODS
     ]
 
+
 @router.get("/backtest-assets", response_model=list[BacktestAssetInfo])
 def list_backtest_assets() -> list[BacktestAssetInfo]:
     """Return all assets available for backtesting."""
     return [BacktestAssetInfo(ticker=ticker, name=name) for ticker, name in BACKTEST_ASSETS.items()]
 
+
 @router.post("/backtest", response_model=BacktestResponse)
-def backtest(request: BacktestRequest) -> BacktestResponse:
+def backtest(
+    request: BacktestRequest,
+    x_session_id: Optional[str] = Header(default="", alias="X-Session-ID"),
+) -> BacktestResponse:
     """Run a portfolio backtest against a historical crisis period."""
     portfolio = [a.model_dump() for a in request.portfolio]
     result = run_backtest(
@@ -86,5 +103,6 @@ def backtest(request: BacktestRequest) -> BacktestResponse:
         num_simulations=request.num_simulations, initial_investment=request.initial_investment,
         model=request.model, rebalance=request.rebalance, seed=request.seed,
     )
-    emit("backtest_completed", context="simulation", crisis_id=request.crisis_id)
+    emit("step_completed", context="simulation", session=x_session_id,
+         action="backtest", crisis_id=request.crisis_id)
     return BacktestResponse(**result)

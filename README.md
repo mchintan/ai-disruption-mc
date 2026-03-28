@@ -38,33 +38,44 @@ Switch to "Stress Test" mode to backtest any portfolio against 6 historical mark
 
 ## Architecture
 
+The backend is organized into **bounded context modules** — logically separated services running in a single container. Each context has its own router and can be extracted to a standalone service when scaling demands it.
+
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    React Frontend                        │
-│  Mode: Forward Sim  |  Stress Test                       │
-│  Step 1: Describe → Step 2: Analyze → Step 3: Configure │
-│                    → Step 4: Simulate                    │
-│  Backtest: Crisis Select → Portfolio → Run → Results     │
-│  React 18 + TypeScript + Tailwind CSS + Recharts         │
-└────────────────────────┬────────────────────────────────┘
-                         │ HTTP (JSON)
-                         ▼
-┌─────────────────────────────────────────────────────────┐
-│                   FastAPI Backend                         │
-│  POST /api/analyze-portfolio  →  Gemini AI Analyzer      │
-│  POST /api/simulate           →  Monte Carlo Engine      │
-│  POST /api/optimize-weights   →  SLSQP Optimizer         │
-│  GET  /api/crisis-periods     →  Crisis Period Catalog   │
-│  GET  /api/backtest-assets    →  Available Assets         │
-│  POST /api/backtest           →  Crisis Backtest Engine   │
-│                                                          │
-│  NumPy + SciPy + google-genai                            │
-└─────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│  React Frontend (TypeScript + Tailwind + Recharts)          │
+│  Mode: Forward Sim  |  Stress Test                          │
+│  Telemetry: sendBeacon → /api/obs/event                     │
+│  Session: X-Session-ID header on all API calls              │
+└───────────────────────────┬─────────────────────────────────┘
+                            │ HTTP (JSON)
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│  FastAPI Backend (single container, scale by cloning)       │
+│                                                             │
+│  Bounded Contexts:                                          │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐      │
+│  │ Intake   │ │Portfolio │ │Simulation│ │ Insights │      │
+│  │          │ │          │ │          │ │          │      │
+│  │ Gemini   │ │ CRUD     │ │ MC sim   │ │ AI       │      │
+│  │ NLP→     │ │ presets  │ │ optimizer│ │ narrative│      │
+│  │ assets   │ │ versions │ │ backtest │ │ critique │      │
+│  └──────────┘ └──────────┘ └──────────┘ └──────────┘      │
+│  ┌──────────┐ ┌─────────────────────────────────────┐      │
+│  │ Fulfill  │ │ Observability (cross-cutting)       │      │
+│  │          │ │ Request tracing → SQLite             │      │
+│  │ broker   │ │ Journey events → funnel, drop-offs   │      │
+│  │ trades   │ │ /api/obs/* query endpoints           │      │
+│  │ execute  │ │                                      │      │
+│  └──────────┘ └─────────────────────────────────────┘      │
+│                                                             │
+│  Shared: engine/monte_carlo.py (GBM, Merton, Cholesky)     │
+│  NumPy + SciPy + google-genai                               │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-**Backend** — Python 3.12 / FastAPI. Six endpoints: portfolio analysis (Gemini AI with curated fallbacks), Monte Carlo simulation (GBM + Merton Jump Diffusion with Cholesky-correlated assets), weight optimization (SLSQP), and historical crisis backtesting.
+**Backend** — Python 3.12 / FastAPI. Six bounded contexts: intake (Gemini AI analysis), portfolio (persistence), simulation (Monte Carlo + optimizer + backtest), insights (AI narratives), fulfill (export/reports), and observability (request tracing + user journey analytics). All run in a single container; scale horizontally by cloning.
 
-**Frontend** — React 18 / TypeScript / Vite. Mode switcher between Forward Simulation (4-step wizard) and Stress Test (crisis backtest). Interactive Recharts visualizations and dark enterprise theme built with Tailwind CSS.
+**Frontend** — React 18 / TypeScript / Vite. Mode switcher between Forward Simulation (4-step wizard) and Stress Test (crisis backtest). Light/dark theme toggle. Frontend telemetry via `sendBeacon`. Interactive Recharts visualizations built with Tailwind CSS.
 
 ---
 
@@ -86,6 +97,12 @@ Switch to "Stress Test" mode to backtest any portfolio against 6 historical mark
 - **Crisis-Calibrated Parameters** — per-asset drift, volatility, jump intensity, and correlation overrides matched to historical behavior
 - **Backtest Analytics** — equity curve with confidence bands, drawdown analysis, per-asset breakdown, sample paths, returns histogram, Sharpe/Sortino/Calmar ratios, VaR, recovery time
 - **Portfolio Presets** — Balanced, Aggressive Growth, Conservative, Crypto Heavy, Equity Only
+- **Brokerage Integration** — connect Alpaca (or IBKR) via OAuth, generate trade lists from target allocations vs current holdings, and execute with one click
+- **Provider Abstraction** — clean `BrokerProvider` interface for adding new brokers (one file + one registry line)
+- **Trade Safety** — default paper trading mode, server-side `confirm` gate, encrypted token storage, PAPER/LIVE visual indicators
+- **Observability** — automatic request tracing, user journey event tracking, funnel analytics, drop-off detection, bottleneck identification
+- **Light/Dark Theme** — toggle between themes with localStorage persistence
+- **Bounded Context Architecture** — modular backend ready for microservice extraction
 
 ---
 
@@ -136,7 +153,7 @@ poetry install
 
 # (Optional) Set Gemini API key for AI analysis
 # Without it, the app uses curated fallback portfolios
-export GEMINI_API_KEY="your-google-gemini-api-key"
+echo 'GEMINI_API_KEY=your-google-gemini-api-key' > .env
 
 # Start the backend server
 poetry run uvicorn app.main:app --reload --port 8000
@@ -162,8 +179,13 @@ The app will be available at `http://localhost:5173`.
 
 | Variable | Location | Default | Description |
 |----------|----------|---------|-------------|
-| `GEMINI_API_KEY` | Backend | (none) | Google Gemini API key. Falls back to curated portfolios if unset |
+| `GEMINI_API_KEY` | Backend `.env` | (none) | Google Gemini API key. Falls back to curated portfolios if unset |
 | `VITE_API_URL` | Frontend | `http://localhost:8000` | Backend API URL |
+| `ALPACA_CLIENT_ID` | Backend `.env` | (none) | Alpaca OAuth client ID (from https://app.alpaca.markets/brokerage/apps) |
+| `ALPACA_CLIENT_SECRET` | Backend `.env` | (none) | Alpaca OAuth client secret |
+| `DEFAULT_TRADING_MODE` | Backend `.env` | `paper` | `paper` for sandbox, `live` for real money |
+| `TOKEN_ENCRYPTION_KEY` | Backend `.env` | (auto-gen) | Fernet key for encrypting stored OAuth tokens |
+| `OTEL_EXPORTER_ENDPOINT` | Backend `.env` | (none) | OTLP collector endpoint. When set, telemetry exports via gRPC instead of local SQLite |
 
 ---
 
@@ -199,38 +221,84 @@ Update the frontend's `VITE_API_URL` to point to your Cloud Run URL before build
 ai-disruption-mc/
 ├── backend/
 │   ├── app/
-│   │   ├── main.py                  # FastAPI app + CORS
-│   │   ├── api/
-│   │   │   └── routes.py            # /api/analyze-portfolio, /api/simulate, /api/backtest, etc.
-│   │   ├── engine/
-│   │   │   ├── analyzer.py          # Gemini AI portfolio analyzer + fallbacks
-│   │   │   ├── backtest.py          # Crisis backtest engine + 6 crisis period definitions
-│   │   │   ├── monte_carlo.py       # GBM, Merton Jump Diffusion, risk metrics
-│   │   │   └── optimizer.py         # SLSQP portfolio weight optimizer
+│   │   ├── main.py                          # FastAPI app, middleware, router mounts
+│   │   ├── contexts/                        # Bounded context modules
+│   │   │   ├── intake/
+│   │   │   │   └── router.py                # POST /api/analyze-portfolio
+│   │   │   ├── portfolio/
+│   │   │   │   └── router.py                # CRUD endpoints (placeholder)
+│   │   │   ├── simulation/
+│   │   │   │   └── router.py                # /api/simulate, /optimize-weights, /backtest
+│   │   │   ├── insights/
+│   │   │   │   ├── narrator.py              # AI narrative generation (Gemini)
+│   │   │   │   └── router.py                # Explain endpoints (placeholder)
+│   │   │   ├── fulfill/
+│   │   │   │   ├── router.py                # OAuth, trade list, execute, order status
+│   │   │   │   ├── schemas.py               # Fulfill-specific Pydantic models
+│   │   │   │   ├── trade_generator.py       # Target vs current → buy/sell list
+│   │   │   │   ├── token_store.py           # Encrypted OAuth token storage (Fernet + SQLite)
+│   │   │   │   └── providers/
+│   │   │   │       ├── base.py              # BrokerProvider ABC
+│   │   │   │       └── alpaca.py            # Alpaca REST API adapter
+│   │   │   └── observability/
+│   │   │       ├── middleware.py             # Request tracing middleware
+│   │   │       ├── journey.py               # Event emitter + SQLite store
+│   │   │       └── router.py                # /api/obs/* query endpoints
+│   │   ├── engine/                          # Shared compute library
+│   │   │   ├── analyzer.py                  # Gemini AI portfolio analyzer
+│   │   │   ├── backtest.py                  # Crisis backtest engine
+│   │   │   ├── monte_carlo.py               # GBM, Merton, risk metrics
+│   │   │   └── optimizer.py                 # SLSQP weight optimizer
 │   │   └── models/
-│   │       └── schemas.py           # Pydantic request/response models
-│   ├── pyproject.toml               # Poetry dependencies
-│   └── README.md
+│   │       └── schemas.py                   # Pydantic models
+│   ├── pyproject.toml
+│   └── .env                                 # GEMINI_API_KEY (gitignored)
 ├── frontend/
 │   ├── src/
-│   │   ├── App.tsx                  # Mode switcher + 4-step wizard state machine
-│   │   ├── api.ts                   # Backend API client
+│   │   ├── App.tsx                          # Mode switcher + wizard + theme toggle
+│   │   ├── api.ts                           # API client (sends X-Session-ID)
+│   │   ├── telemetry.ts                     # Frontend event tracker (sendBeacon)
 │   │   ├── types/
-│   │   │   └── portfolio.ts         # TypeScript type definitions
+│   │   │   ├── portfolio.ts                 # Simulation/backtest interfaces
+│   │   │   └── fulfill.ts                   # Brokerage/trade interfaces
 │   │   └── components/
-│   │       ├── BacktestPanel.tsx        # Stress Test: crisis backtest UI
-│   │       ├── PortfolioDescriber.tsx   # Step 1: natural language input
-│   │       ├── AnalysisReview.tsx       # Step 2: AI recommendations
-│   │       ├── SimulationConfig.tsx     # Step 3: model & parameters
-│   │       ├── SimulationDashboard.tsx  # Step 4: charts & metrics
-│   │       └── ThemeProvider.tsx        # Light/dark theme context
+│   │       ├── PortfolioDescriber.tsx        # Step 1: describe
+│   │       ├── AnalysisReview.tsx            # Step 2: review AI recs
+│   │       ├── SimulationConfig.tsx          # Step 3: configure
+│   │       ├── SimulationDashboard.tsx       # Step 4: results + optimizer + fulfill
+│   │       ├── FulfillPanel.tsx              # Broker connect + trade list + execute
+│   │       ├── BacktestPanel.tsx             # Stress Test UI
+│   │       └── ThemeProvider.tsx             # Light/dark theme context
 │   ├── package.json
-│   ├── tailwind.config.js
-│   ├── vite.config.ts
-│   └── README.md
-├── docs/                            # Screenshots
+│   └── tailwind.config.js
+├── docs/                                    # Screenshots
 └── README.md
 ```
+
+---
+
+## Observability
+
+The platform includes built-in observability for monitoring user journeys and system performance. All telemetry is stored locally in SQLite (`telemetry.db`) and queryable via REST endpoints.
+
+### Query Endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /api/obs/funnel?hours=24` | Step completion rates across bounded contexts |
+| `GET /api/obs/timing?hours=24` | P50/P95/P99 latency per API endpoint |
+| `GET /api/obs/journey/:session` | Full event timeline for a specific user session |
+| `GET /api/obs/errors?hours=24` | Recent errors grouped by context and endpoint |
+| `GET /api/obs/bottlenecks` | Top 10 slowest endpoints by P95 latency |
+| `GET /api/obs/drop-offs?hours=24` | Steps with highest user abandonment rates |
+| `POST /api/obs/event` | Frontend event sink (receives telemetry via sendBeacon) |
+
+### How It Works
+
+- **Request tracing**: Every API request is automatically timed and recorded by the observability middleware
+- **Journey events**: Backend contexts emit `step_completed` events with session IDs; frontend emits step transitions via `sendBeacon`
+- **Session correlation**: Frontend sends `X-Session-ID` header on all API calls, linking backend traces to frontend events
+- **Export-ready**: Set `OTEL_EXPORTER_ENDPOINT` to ship telemetry to an external OpenTelemetry collector (Jaeger, Grafana Tempo, Datadog) instead of local SQLite
 
 ---
 
