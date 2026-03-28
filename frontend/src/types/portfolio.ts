@@ -222,3 +222,50 @@ export interface BacktestAssetInfo {
 }
 
 export type AppMode = "simulate" | "backtest";
+
+// Simulation config shorthand (matches PortfolioExperiment.lastSimulation.config)
+export interface SimConfig {
+  numSimulations: number;
+  numYears: number;
+  model: "gbm" | "merton";
+  initialInvestment: number;
+  seed: number | null;
+}
+
+// Workspace navigation
+export type AppTab = "build" | "simulate" | "backtest" | "optimize" | "execute";
+
+// Portfolio experiment (persisted to IndexedDB)
+export interface PortfolioExperiment {
+  id: string;
+  name: string;
+  createdAt: number;
+  updatedAt: number;
+  portfolio: {
+    assets: AssetParams[];
+    correlationMatrix: number[][];
+    description: string;
+    riskTolerance: string;
+  };
+  lastSimulation: {
+    config: {
+      numSimulations: number;
+      numYears: number;
+      model: "gbm" | "merton";
+      initialInvestment: number;
+      seed: number | null;
+    };
+    result: SimulateResponse;
+  } | null;
+  lastOptimization: OptimizeResponse | null;
+  lastBacktest: {
+    crisisId: string;
+    config: {
+      numSimulations: number;
+      initialInvestment: number;
+      model: string;
+      rebalance: boolean;
+    };
+    result: BacktestResponse;
+  } | null;
+}
