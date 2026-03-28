@@ -5,11 +5,13 @@ import { PortfolioDescriber } from "./components/PortfolioDescriber";
 import { AnalysisReview } from "./components/AnalysisReview";
 import { SimulationConfig } from "./components/SimulationConfig";
 import { SimulationDashboard } from "./components/SimulationDashboard";
+import { BacktestPanel } from "./components/BacktestPanel";
 import { analyzePortfolio, runSimulation } from "./api";
-import type { AppStep, AssetParams, AnalyzeResponse, SimulateResponse } from "./types/portfolio";
+import type { AppStep, AppMode, AssetParams, AnalyzeResponse, SimulateResponse } from "./types/portfolio";
 
 function AppContent() {
   const { theme, toggleTheme } = useTheme();
+  const [mode, setMode] = useState<AppMode>("simulate");
   const [step, setStep] = useState<AppStep>("describe");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -113,7 +115,32 @@ function AppContent() {
           </div>
 
           <div className="flex items-center gap-4">
-            {/* Step Progress */}
+            {/* Mode Switcher */}
+            <div className="flex items-center bg-stone-100 dark:bg-slate-800/50 rounded-lg p-0.5">
+              <button
+                onClick={() => setMode("simulate")}
+                className={`px-3 py-1.5 rounded-md text-xs font-mono font-semibold transition-all ${
+                  mode === "simulate"
+                    ? "bg-white text-teal-700 shadow-sm dark:bg-slate-700 dark:text-cyan-400"
+                    : "text-stone-500 hover:text-stone-700 dark:text-slate-500 dark:hover:text-slate-300"
+                }`}
+              >
+                Forward Sim
+              </button>
+              <button
+                onClick={() => setMode("backtest")}
+                className={`px-3 py-1.5 rounded-md text-xs font-mono font-semibold transition-all ${
+                  mode === "backtest"
+                    ? "bg-white text-red-700 shadow-sm dark:bg-slate-700 dark:text-red-400"
+                    : "text-stone-500 hover:text-stone-700 dark:text-slate-500 dark:hover:text-slate-300"
+                }`}
+              >
+                Stress Test
+              </button>
+            </div>
+
+            {/* Step Progress (only in simulate mode) */}
+            {mode === "simulate" && (
             <div className="flex items-center gap-1">
               {steps.map((s, i) => (
                 <div key={s.key} className="flex items-center">
@@ -141,6 +168,7 @@ function AppContent() {
                 </div>
               ))}
             </div>
+            )}
 
             {/* Theme Toggle */}
             <button
@@ -172,32 +200,38 @@ function AppContent() {
 
       {/* Main Content */}
       <main className="max-w-6xl mx-auto px-6 py-10">
-        {step === "describe" && (
-          <PortfolioDescriber onSubmit={handleDescribe} isLoading={isLoading} />
-        )}
-        {step === "analyze" && analysis && (
-          <AnalysisReview analysis={analysis} onConfirm={handleConfirmAnalysis} onBack={() => setStep("describe")} />
-        )}
-        {step === "configure" && (
-          <SimulationConfig
-            assets={assets}
-            correlationMatrix={correlationMatrix}
-            onRun={handleRunSimulation}
-            onBack={() => setStep("analyze")}
-            isLoading={isLoading}
-          />
-        )}
-        {step === "simulate" && simulationResult && simulationConfig && (
-          <SimulationDashboard
-            result={simulationResult}
-            simulationConfig={{
-              assets,
-              correlationMatrix,
-              ...simulationConfig,
-            }}
-            onBack={() => setStep("configure")}
-            onRestart={handleRestart}
-          />
+        {mode === "backtest" ? (
+          <BacktestPanel />
+        ) : (
+          <>
+            {step === "describe" && (
+              <PortfolioDescriber onSubmit={handleDescribe} isLoading={isLoading} />
+            )}
+            {step === "analyze" && analysis && (
+              <AnalysisReview analysis={analysis} onConfirm={handleConfirmAnalysis} onBack={() => setStep("describe")} />
+            )}
+            {step === "configure" && (
+              <SimulationConfig
+                assets={assets}
+                correlationMatrix={correlationMatrix}
+                onRun={handleRunSimulation}
+                onBack={() => setStep("analyze")}
+                isLoading={isLoading}
+              />
+            )}
+            {step === "simulate" && simulationResult && simulationConfig && (
+              <SimulationDashboard
+                result={simulationResult}
+                simulationConfig={{
+                  assets,
+                  correlationMatrix,
+                  ...simulationConfig,
+                }}
+                onBack={() => setStep("configure")}
+                onRestart={handleRestart}
+              />
+            )}
+          </>
         )}
       </main>
 

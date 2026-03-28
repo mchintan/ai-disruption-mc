@@ -124,3 +124,128 @@ class OptimizeResponse(BaseModel):
     converged: bool
     narrative: str
     optimized_simulation: SimulateResponse
+
+
+# ---------------------------------------------------------------------------
+# Backtest models
+# ---------------------------------------------------------------------------
+
+class BacktestAsset(BaseModel):
+    ticker: str
+    allocation_pct: float = Field(ge=0, le=100)
+
+
+class BacktestRequest(BaseModel):
+    crisis_id: str = Field(description="ID of the crisis period to backtest against")
+    portfolio: list[BacktestAsset]
+    num_simulations: int = Field(default=500, ge=50, le=5000)
+    initial_investment: float = Field(default=100000, gt=0)
+    model: str = Field(
+        default="merton",
+        description="Simulation model: 'gbm' or 'merton'",
+    )
+    rebalance: bool = Field(
+        default=False,
+        description="Whether to rebalance portfolio daily",
+    )
+    seed: Optional[int] = Field(default=42)
+
+
+class BacktestStatistics(BaseModel):
+    total_return_pct: float
+    annualized_return_pct: float
+    final_value_median: float
+    final_value_p5: float
+    final_value_p95: float
+    max_drawdown_pct: float
+    max_drawdown_p95: float
+    sharpe_ratio: float
+    sortino_ratio: float
+    calmar_ratio: float
+    var_95: float
+    var_99: float
+    best_day_pct: float
+    worst_day_pct: float
+    positive_days_pct: float
+    recovery_days: Optional[int]
+    volatility_ann_pct: float
+
+
+class CrisisInfo(BaseModel):
+    id: str
+    name: str
+    start_date: str
+    end_date: str
+    trading_days: int
+    description: str
+
+
+class AssetCurveResult(BaseModel):
+    ticker: str
+    name: str
+    allocation_pct: float
+    median_curve: list[float]
+    final_median: float
+    final_return_pct: float
+
+
+class EquityPercentile(BaseModel):
+    day: int
+    p5: float
+    p25: float
+    median: float
+    p75: float
+    p95: float
+
+
+class DrawdownPercentile(BaseModel):
+    day: int
+    median: float
+    p75: float
+    p95: float
+
+
+class SamplePathPoint(BaseModel):
+    day: int
+    value: float
+
+
+class ReturnsHistogramBin(BaseModel):
+    bin: float
+    count: int
+    is_negative: bool
+
+
+class BacktestConfig(BaseModel):
+    num_simulations: int
+    initial_investment: float
+    model: str
+    rebalance: bool
+
+
+class BacktestResponse(BaseModel):
+    crisis: CrisisInfo
+    portfolio: list[dict]
+    equity_percentiles: list[EquityPercentile]
+    drawdown_curve: list[float]
+    drawdown_percentiles: list[DrawdownPercentile]
+    sample_paths: list[list[SamplePathPoint]]
+    asset_curves: list[AssetCurveResult]
+    returns_histogram: list[ReturnsHistogramBin]
+    statistics: BacktestStatistics
+    config: BacktestConfig
+
+
+class CrisisPeriodSummary(BaseModel):
+    id: str
+    name: str
+    start_date: str
+    end_date: str
+    trading_days: int
+    description: str
+    available_assets: list[str]
+
+
+class BacktestAssetInfo(BaseModel):
+    ticker: str
+    name: str

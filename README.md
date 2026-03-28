@@ -4,6 +4,8 @@ An enterprise-grade portfolio simulation platform that combines **AI-powered ana
 
 Users describe a portfolio in plain English, review AI-recommended assets with calibrated parameters, configure simulation settings, and visualize results through interactive percentile fan charts, sample paths, and comprehensive risk metrics.
 
+The platform also includes a **Historical Crisis Stress Test** mode that backtests portfolios against 6 major market crises using crisis-calibrated simulation parameters.
+
 ---
 
 ## Screenshots
@@ -29,6 +31,9 @@ Interactive dashboard with key metrics (median terminal value, VaR, Sharpe ratio
 ![Step 4 — Simulate](docs/step4-simulate.png)
 ![Step 4 — Details](docs/step4-simulate-details.png)
 
+### Stress Test — Historical Crisis Backtest
+Switch to "Stress Test" mode to backtest any portfolio against 6 historical market crises. Select a crisis period, configure asset allocations with presets, and run Monte Carlo simulation calibrated to crisis-era parameters. View results across 6 tabs: equity curve with confidence bands, drawdown analysis, per-asset breakdown, sample paths, returns histogram, and detailed statistics including Sharpe, Sortino, Calmar ratios, VaR, and recovery time.
+
 ---
 
 ## Architecture
@@ -36,8 +41,10 @@ Interactive dashboard with key metrics (median terminal value, VaR, Sharpe ratio
 ```
 ┌─────────────────────────────────────────────────────────┐
 │                    React Frontend                        │
+│  Mode: Forward Sim  |  Stress Test                       │
 │  Step 1: Describe → Step 2: Analyze → Step 3: Configure │
 │                    → Step 4: Simulate                    │
+│  Backtest: Crisis Select → Portfolio → Run → Results     │
 │  React 18 + TypeScript + Tailwind CSS + Recharts         │
 └────────────────────────┬────────────────────────────────┘
                          │ HTTP (JSON)
@@ -46,14 +53,18 @@ Interactive dashboard with key metrics (median terminal value, VaR, Sharpe ratio
 │                   FastAPI Backend                         │
 │  POST /api/analyze-portfolio  →  Gemini AI Analyzer      │
 │  POST /api/simulate           →  Monte Carlo Engine      │
+│  POST /api/optimize-weights   →  SLSQP Optimizer         │
+│  GET  /api/crisis-periods     →  Crisis Period Catalog   │
+│  GET  /api/backtest-assets    →  Available Assets         │
+│  POST /api/backtest           →  Crisis Backtest Engine   │
 │                                                          │
 │  NumPy + SciPy + google-genai                            │
 └─────────────────────────────────────────────────────────┘
 ```
 
-**Backend** — Python 3.12 / FastAPI. Two endpoints: portfolio analysis (Gemini AI with curated fallbacks) and Monte Carlo simulation (GBM + Merton Jump Diffusion with Cholesky-correlated assets).
+**Backend** — Python 3.12 / FastAPI. Six endpoints: portfolio analysis (Gemini AI with curated fallbacks), Monte Carlo simulation (GBM + Merton Jump Diffusion with Cholesky-correlated assets), weight optimization (SLSQP), and historical crisis backtesting.
 
-**Frontend** — React 18 / TypeScript / Vite. 4-step wizard UI with editable parameters, interactive Recharts visualizations, and a dark enterprise theme built with Tailwind CSS.
+**Frontend** — React 18 / TypeScript / Vite. Mode switcher between Forward Simulation (4-step wizard) and Stress Test (crisis backtest). Interactive Recharts visualizations and dark enterprise theme built with Tailwind CSS.
 
 ---
 
@@ -69,6 +80,12 @@ Interactive dashboard with key metrics (median terminal value, VaR, Sharpe ratio
 - **Configurable Parameters** — number of simulations, horizon, model type, initial investment, random seed
 - **Editable Asset Allocations** — adjust drift, volatility, jump intensity, and allocation percentages before simulation
 - **AI Fallback System** — 3 curated portfolio templates when Gemini API is unavailable
+- **Portfolio Weight Optimizer** — SLSQP-based optimization for Sharpe, min variance, min CVaR, min max drawdown, or max return
+- **Historical Crisis Stress Test** — backtest portfolios against 6 major market crises with calibrated parameters
+- **6 Crisis Periods** — COVID-19 Crash, 2022 Crypto Winter, 2018 Bear Market, China Ban 2021, GFC 2008, Dot-Com Bust
+- **Crisis-Calibrated Parameters** — per-asset drift, volatility, jump intensity, and correlation overrides matched to historical behavior
+- **Backtest Analytics** — equity curve with confidence bands, drawdown analysis, per-asset breakdown, sample paths, returns histogram, Sharpe/Sortino/Calmar ratios, VaR, recovery time
+- **Portfolio Presets** — Balanced, Aggressive Growth, Conservative, Crypto Heavy, Equity Only
 
 ---
 
@@ -184,25 +201,29 @@ ai-disruption-mc/
 │   ├── app/
 │   │   ├── main.py                  # FastAPI app + CORS
 │   │   ├── api/
-│   │   │   └── routes.py            # /api/analyze-portfolio, /api/simulate
+│   │   │   └── routes.py            # /api/analyze-portfolio, /api/simulate, /api/backtest, etc.
 │   │   ├── engine/
 │   │   │   ├── analyzer.py          # Gemini AI portfolio analyzer + fallbacks
-│   │   │   └── monte_carlo.py       # GBM, Merton Jump Diffusion, risk metrics
+│   │   │   ├── backtest.py          # Crisis backtest engine + 6 crisis period definitions
+│   │   │   ├── monte_carlo.py       # GBM, Merton Jump Diffusion, risk metrics
+│   │   │   └── optimizer.py         # SLSQP portfolio weight optimizer
 │   │   └── models/
 │   │       └── schemas.py           # Pydantic request/response models
 │   ├── pyproject.toml               # Poetry dependencies
 │   └── README.md
 ├── frontend/
 │   ├── src/
-│   │   ├── App.tsx                  # 4-step wizard state machine
+│   │   ├── App.tsx                  # Mode switcher + 4-step wizard state machine
 │   │   ├── api.ts                   # Backend API client
 │   │   ├── types/
 │   │   │   └── portfolio.ts         # TypeScript type definitions
 │   │   └── components/
+│   │       ├── BacktestPanel.tsx        # Stress Test: crisis backtest UI
 │   │       ├── PortfolioDescriber.tsx   # Step 1: natural language input
 │   │       ├── AnalysisReview.tsx       # Step 2: AI recommendations
 │   │       ├── SimulationConfig.tsx     # Step 3: model & parameters
-│   │       └── SimulationDashboard.tsx  # Step 4: charts & metrics
+│   │       ├── SimulationDashboard.tsx  # Step 4: charts & metrics
+│   │       └── ThemeProvider.tsx        # Light/dark theme context
 │   ├── package.json
 │   ├── tailwind.config.js
 │   ├── vite.config.ts
