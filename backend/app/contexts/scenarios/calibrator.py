@@ -56,7 +56,7 @@ def calibrate_scenario(description: str, asset_tickers: list[str], trading_days:
             prompt = CALIBRATION_PROMPT.format(
                 description=description, trading_days=trading_days, assets_text=assets_text
             )
-            response = client.models.generate_content(model="gemini-2.0-flash", contents=prompt)
+            response = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
             text = response.text.strip()
             if text.startswith("```"):
                 text = re.sub(r"^```(?:json)?\s*", "", text)
