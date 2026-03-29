@@ -49,7 +49,9 @@ def calibrate(
     return CalibrateResponse(scenario=scenario)
 
 
-@router.post("/run")
+from app.models.schemas import BacktestResponse
+
+@router.post("/run", response_model=BacktestResponse)
 def run_scenario(
     req: ScenarioRunRequest,
     x_session_id: Optional[str] = Header(default="", alias="X-Session-ID"),
@@ -106,4 +108,4 @@ def run_scenario(
         cm.pop("custom_scenario", None)
 
     emit("step_completed", context="scenarios", session=x_session_id, action="run")
-    return result
+    return BacktestResponse(**result)
