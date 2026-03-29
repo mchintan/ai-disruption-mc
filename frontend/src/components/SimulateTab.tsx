@@ -85,7 +85,7 @@ export function SimulateTab({ assets, correlationMatrix, lastSimulation, onSimul
     setDnaLoading(true);
     try {
       const result = await analyzeDNA({ assets, correlation_matrix: correlationMatrix });
-      setDna(result as DNAResponse);
+      setDna(result as unknown as DNAResponse);
     } catch (e) {
       console.error("DNA analysis failed:", e);
     } finally {
