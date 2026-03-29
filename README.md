@@ -27,6 +27,14 @@ Every competitor is closed-source and covers 2-3 of these capabilities. This is 
 - **Enterprise architecture** — bounded contexts, provider abstraction for brokers, built-in observability with funnel analytics, OTEL-exportable telemetry. Designed for teams, not just individuals.
 - **Experiment management** — save, compare, duplicate, restore portfolio experiments. Every competitor treats each session as disposable.
 
+**Capabilities no competitor has:**
+
+- **Portfolio DNA** — 8-dimensional fingerprint (growth, volatility, tail risk, diversification, concentration, defensive tilt, momentum, crisis resilience) with AI personality summary. Compare portfolio "personalities" across experiments.
+- **Investment Thesis Tracker** — structured rationale per asset (narrative, assumptions, risk factors, invalidation triggers). AI generates theses, then critiques them against your simulation results. Status badges: valid / weakening / invalidated.
+- **Custom Scenario Builder** — describe a hypothetical crisis in natural language ("inflation hits 8%, tech earnings drop 40%"). AI calibrates drift, volatility, jump, and correlation parameters. Runs through the same backtest engine as historical crises.
+- **Regime-Aware Simulation** — Markov chain switching between bull, bear, crisis, and recovery regimes during simulation. Each regime applies different drift/volatility/jump multipliers. No more flat-line assumptions.
+- **Collaborative Experiments** — publish experiments, browse a community feed, fork others' portfolios, compare by Sharpe/return/drawdown.
+
 <br>
 
 ## Screenshots
@@ -70,7 +78,7 @@ Alpaca OAuth. Trade list. Paper or live. Safety gates.
 
 <br>
 
-## Five Tabs. One Workspace.
+## Six Tabs. One Workspace.
 
 | Tab | What it does |
 |-----|-------------|
@@ -79,6 +87,7 @@ Alpaca OAuth. Trade list. Paper or live. Safety gates.
 | **Backtest** | Stress-test against 6 historical crises — COVID-19, 2022 Crypto Winter, GFC 2008, Dot-Com Bust, and more. |
 | **Optimize** | Find optimal weights across 5 objectives (max Sharpe, min VaR, min CVaR, min drawdown, max return). **Apply with one click.** |
 | **Execute** | Connect Alpaca via OAuth. Generate trade list from target vs current holdings. Review. Submit. Paper or live. |
+| **Community** | Browse published experiments. Fork portfolios. Leaderboard by Sharpe, return, drawdown. |
 
 A persistent **portfolio bar** shows current allocations across all tabs. Switching tabs never destroys state.
 
@@ -124,13 +133,17 @@ Backend (Python 3.12 / FastAPI / single container)
   ├── contexts/intake/         Gemini AI portfolio analysis
   ├── contexts/simulation/     Monte Carlo engine, optimizer, backtest
   ├── contexts/insights/       AI narrative generation
+  ├── contexts/dna/            Portfolio DNA fingerprint (8 dimensions)
+  ├── contexts/thesis/         Investment thesis generation + AI critique
+  ├── contexts/scenarios/      Custom scenario calibration + execution
+  ├── contexts/community/      Publish, feed, fork experiments
   ├── contexts/fulfill/        Brokerage OAuth, trade list, execution
   │   └── providers/           BrokerProvider ABC → Alpaca adapter
   ├── contexts/observability/  Request tracing, journey analytics
-  └── engine/                  GBM, Merton Jump Diffusion, Cholesky correlation
+  └── engine/                  GBM, Merton, Regime-Switching, Cholesky
 ```
 
-Six bounded contexts. One container. Scale by cloning. Extract any context to its own service when needed.
+Ten bounded contexts. One container. Scale by cloning. Every context works headless via REST — use any piece independently.
 
 <br>
 
@@ -153,6 +166,10 @@ dS/S = (mu - lambda*k)dt + sigma*dW + J*dN
 ```
 
 Poisson jump arrivals. Log-normal jump sizes. Compensation term `k = exp(mu_J + sigma_J^2/2) - 1`.
+
+**Regime-Switching Simulation**
+
+4 regimes (bull, bear, crisis, recovery) with Markov chain transitions. Each regime applies drift/volatility/jump multipliers to the underlying GBM+jump process. Transition probabilities calibrated from historical regime durations.
 
 **Correlation** — Cholesky decomposition of the NxN correlation matrix for correlated Brownian motions.
 

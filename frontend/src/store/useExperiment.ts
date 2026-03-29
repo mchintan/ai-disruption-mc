@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import type { AssetParams, SimulateResponse, OptimizeResponse, BacktestResponse, PortfolioExperiment } from "../types/portfolio";
+import type { AssetParams, SimulateResponse, OptimizeResponse, BacktestResponse, PortfolioExperiment, DNAResponse, Thesis, CustomScenario } from "../types/portfolio";
 import {
   saveExperiment,
   getExperiment,
@@ -28,6 +28,10 @@ export function createBlankExperiment(name: string = "New Experiment"): Portfoli
     lastSimulation: null,
     lastOptimization: null,
     lastBacktest: null,
+    lastDNA: null,
+    theses: null,
+    lastScenario: null,
+    publishedId: null,
   };
 }
 
@@ -104,6 +108,26 @@ export function useExperiment() {
     persist({ ...experiment, lastBacktest: { crisisId, config, result } });
   }, [experiment, persist]);
 
+  const saveDNA = useCallback((dna: DNAResponse) => {
+    if (!experiment) return;
+    persist({ ...experiment, lastDNA: dna });
+  }, [experiment, persist]);
+
+  const saveTheses = useCallback((theses: Thesis[]) => {
+    if (!experiment) return;
+    persist({ ...experiment, theses });
+  }, [experiment, persist]);
+
+  const saveScenario = useCallback((description: string, scenario: CustomScenario, result: BacktestResponse) => {
+    if (!experiment) return;
+    persist({ ...experiment, lastScenario: { description, scenario, result } });
+  }, [experiment, persist]);
+
+  const setPublishedId = useCallback((id: string) => {
+    if (!experiment) return;
+    persist({ ...experiment, publishedId: id });
+  }, [experiment, persist]);
+
   const applyOptimizedWeights = useCallback(() => {
     if (!experiment?.lastOptimization) return;
     const newAssets = experiment.portfolio.assets.map(asset => {
@@ -178,6 +202,10 @@ export function useExperiment() {
     saveSimulation,
     saveOptimization,
     saveBacktest,
+    saveDNA,
+    saveTheses,
+    saveScenario,
+    setPublishedId,
     applyOptimizedWeights,
     switchExperiment,
     createExperiment,

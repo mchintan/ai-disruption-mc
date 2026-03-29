@@ -11,6 +11,10 @@ from app.contexts.portfolio.router import router as portfolio_router
 from app.contexts.fulfill.router import router as fulfill_router
 from app.contexts.observability.router import router as obs_router
 from app.contexts.observability.middleware import ObservabilityMiddleware
+from app.contexts.dna.router import router as dna_router
+from app.contexts.thesis.router import router as thesis_router
+from app.contexts.scenarios.router import router as scenarios_router
+from app.contexts.community.router import router as community_router
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
@@ -33,6 +37,10 @@ app.include_router(insights_router)
 app.include_router(portfolio_router)
 app.include_router(fulfill_router)
 app.include_router(obs_router)
+app.include_router(dna_router)
+app.include_router(thesis_router)
+app.include_router(scenarios_router)
+app.include_router(community_router)
 
 
 @app.get("/healthz")

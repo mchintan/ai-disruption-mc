@@ -233,7 +233,7 @@ export interface SimConfig {
 }
 
 // Workspace navigation
-export type AppTab = "build" | "simulate" | "backtest" | "optimize" | "execute";
+export type AppTab = "build" | "simulate" | "backtest" | "optimize" | "execute" | "community";
 
 // Portfolio experiment (persisted to IndexedDB)
 export interface PortfolioExperiment {
@@ -268,4 +268,61 @@ export interface PortfolioExperiment {
     };
     result: BacktestResponse;
   } | null;
+  lastDNA: DNAResponse | null;
+  theses: Thesis[] | null;
+  lastScenario: {
+    description: string;
+    scenario: CustomScenario;
+    result: BacktestResponse;
+  } | null;
+  publishedId: string | null;
+}
+
+// Portfolio DNA
+export interface DNAScores {
+  growth: number;
+  volatility: number;
+  tail_risk: number;
+  diversification: number;
+  concentration: number;
+  defensive: number;
+  momentum: number;
+  crisis_resilience: number;
+}
+
+export interface DNAResponse {
+  scores: DNAScores;
+  personality: string;
+}
+
+// Investment Thesis
+export interface Thesis {
+  asset_ticker: string;
+  narrative: string;
+  key_assumptions: string[];
+  risk_factors: string[];
+  invalidation_triggers: string[];
+  status: "valid" | "weakening" | "invalidated";
+  critique: string;
+  last_critiqued_at: number;
+}
+
+// Custom Scenarios
+export interface CustomScenario {
+  name: string;
+  description: string;
+  trading_days: number;
+  assets: Record<string, { drift: number; volatility: number; jump_intensity: number; jump_mean: number; jump_vol: number }>;
+  correlations: Record<string, number>;
+}
+
+// Community
+export interface PublishedExperiment {
+  id: string;
+  name: string;
+  author: string;
+  portfolio: Record<string, unknown>;
+  metrics: Record<string, unknown>;
+  dna: Record<string, unknown>;
+  published_at: number;
 }

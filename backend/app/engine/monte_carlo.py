@@ -13,6 +13,8 @@ Merton Jump Diffusion: dS/S = (mu - lambda*k)*dt + sigma*dW + J*dN
 import numpy as np
 from numpy.typing import NDArray
 
+from app.engine.regimes import RegimeConfig, DEFAULT_REGIME_CONFIG
+
 
 def generate_correlated_normals(
     num_assets: int,
@@ -131,6 +133,75 @@ def simulate_merton_jump_diffusion(
     paths[:, 1:] = S0 * np.exp(np.cumsum(log_returns, axis=1))
 
     return paths
+
+
+def simulate_regime_switching(
+    S0: float,
+    mu: float,
+    sigma: float,
+    lambda_j: float,
+    mu_j: float,
+    sigma_j: float,
+    dt: float,
+    num_steps: int,
+    Z: NDArray[np.float64],
+    rng: np.random.Generator,
+    regime_config: RegimeConfig | None = None,
+) -> tuple[NDArray[np.float64], NDArray[np.int32]]:
+    """
+    Regime-switching simulation with Markov chain transitions.
+    Returns (price_paths, regime_history).
+    """
+    if regime_config is None:
+        regime_config = DEFAULT_REGIME_CONFIG
+
+    num_sims = Z.shape[0]
+    paths = np.zeros((num_sims, num_steps + 1))
+    paths[:, 0] = S0
+    regime_history = np.zeros((num_sims, num_steps), dtype=np.int32)
+
+    n_regimes = len(regime_config.regimes)
+    trans = np.array(regime_config.transition_matrix)
+
+    # Initialize regimes for all simulations
+    current_regime = np.full(num_sims, regime_config.initial_regime, dtype=np.int32)
+
+    for t in range(num_steps):
+        regime_history[:, t] = current_regime
+
+        # Get multipliers for current regime of each simulation
+        drift_mult = np.array([regime_config.regimes[r].drift_multiplier for r in current_regime])
+        vol_mult = np.array([regime_config.regimes[r].volatility_multiplier for r in current_regime])
+        jump_mult = np.array([regime_config.regimes[r].jump_intensity_multiplier for r in current_regime])
+
+        # Apply regime-adjusted parameters
+        adj_mu = mu * drift_mult
+        adj_sigma = sigma * vol_mult
+        adj_lambda = lambda_j * jump_mult
+
+        # GBM component with regime-adjusted params
+        drift_term = (adj_mu - 0.5 * adj_sigma ** 2) * dt
+        diffusion_term = adj_sigma * np.sqrt(dt) * Z[:, t]
+
+        # Jump component
+        k = np.exp(mu_j + 0.5 * sigma_j ** 2) - 1.0
+        jump_comp = np.zeros(num_sims)
+        if lambda_j > 0:
+            num_jumps = rng.poisson(adj_lambda * dt)
+            for sim in range(num_sims):
+                if num_jumps[sim] > 0:
+                    jumps = rng.normal(mu_j, sigma_j, size=int(num_jumps[sim]))
+                    jump_comp[sim] = np.sum(jumps)
+
+        drift_adj = drift_term - adj_lambda * k * dt
+        log_ret = drift_adj + diffusion_term + jump_comp
+        paths[:, t + 1] = paths[:, t] * np.exp(log_ret)
+
+        # Regime transition
+        for sim in range(num_sims):
+            current_regime[sim] = rng.choice(n_regimes, p=trans[current_regime[sim]])
+
+    return paths, regime_history
 
 
 def compute_percentiles(
@@ -253,7 +324,22 @@ def run_simulation(
         S0 = initial_investment * weight
         Z = Z_all[:, :, i]
 
-        if model == "merton" and (
+        if model == "regime":
+            from app.engine.regimes import DEFAULT_REGIME_CONFIG
+            paths, _ = simulate_regime_switching(
+                S0=S0,
+                mu=asset["drift"],
+                sigma=asset["volatility"],
+                lambda_j=asset.get("jump_intensity", 0),
+                mu_j=asset.get("jump_mean", 0),
+                sigma_j=asset.get("jump_vol", 0),
+                dt=dt,
+                num_steps=num_steps,
+                Z=Z,
+                rng=rng,
+                regime_config=DEFAULT_REGIME_CONFIG,
+            )
+        elif model == "merton" and (
             asset.get("jump_intensity", 0) > 0 or
             asset.get("jump_vol", 0) > 0
         ):

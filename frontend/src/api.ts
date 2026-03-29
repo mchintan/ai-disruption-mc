@@ -136,3 +136,55 @@ export async function getOrderStatus(broker: BrokerType): Promise<OrderStatusIte
   if (!res.ok) throw new Error(`Order status check failed: ${await res.text()}`);
   return res.json();
 }
+
+// DNA
+export async function analyzeDNA(request: { assets: unknown[]; correlation_matrix: number[][] }): Promise<{ scores: Record<string, number>; personality: string }> {
+  const res = await fetch(`${API_BASE}/api/dna/analyze`, { method: "POST", headers: headers(), body: JSON.stringify(request) });
+  if (!res.ok) throw new Error(`DNA analysis failed: ${await res.text()}`);
+  return res.json();
+}
+
+// Thesis
+export async function generateTheses(request: { assets: unknown[]; description: string; risk_tolerance: string }): Promise<{ theses: unknown[] }> {
+  const res = await fetch(`${API_BASE}/api/thesis/generate`, { method: "POST", headers: headers(), body: JSON.stringify(request) });
+  if (!res.ok) throw new Error(`Thesis generation failed: ${await res.text()}`);
+  return res.json();
+}
+
+export async function critiqueTheses(request: { theses: unknown[]; risk_metrics: Record<string, number> }): Promise<{ theses: unknown[] }> {
+  const res = await fetch(`${API_BASE}/api/thesis/critique`, { method: "POST", headers: headers(), body: JSON.stringify(request) });
+  if (!res.ok) throw new Error(`Thesis critique failed: ${await res.text()}`);
+  return res.json();
+}
+
+// Scenarios
+export async function calibrateScenario(request: { description: string; asset_tickers: string[]; trading_days: number }): Promise<{ scenario: Record<string, unknown> }> {
+  const res = await fetch(`${API_BASE}/api/scenarios/calibrate`, { method: "POST", headers: headers(), body: JSON.stringify(request) });
+  if (!res.ok) throw new Error(`Scenario calibration failed: ${await res.text()}`);
+  return res.json();
+}
+
+export async function runScenario(request: Record<string, unknown>): Promise<Record<string, unknown>> {
+  const res = await fetch(`${API_BASE}/api/scenarios/run`, { method: "POST", headers: headers(), body: JSON.stringify(request) });
+  if (!res.ok) throw new Error(`Scenario run failed: ${await res.text()}`);
+  return res.json();
+}
+
+// Community
+export async function publishExperiment(request: { name: string; portfolio: Record<string, unknown>; metrics: Record<string, unknown>; dna: Record<string, unknown> }): Promise<{ id: string; published_at: number }> {
+  const res = await fetch(`${API_BASE}/api/community/publish`, { method: "POST", headers: headers(), body: JSON.stringify(request) });
+  if (!res.ok) throw new Error(`Publish failed: ${await res.text()}`);
+  return res.json();
+}
+
+export async function getCommunityFeed(sort: string = "published_at", limit: number = 20): Promise<unknown[]> {
+  const res = await fetch(`${API_BASE}/api/community/feed?sort=${sort}&limit=${limit}`, { headers: headers() });
+  if (!res.ok) throw new Error(`Feed failed: ${await res.text()}`);
+  return res.json();
+}
+
+export async function forkExperiment(expId: string): Promise<Record<string, unknown>> {
+  const res = await fetch(`${API_BASE}/api/community/experiment/${expId}`, { headers: headers() });
+  if (!res.ok) throw new Error(`Fork failed: ${await res.text()}`);
+  return res.json();
+}

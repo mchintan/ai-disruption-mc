@@ -9,6 +9,7 @@ import { SimulateTab } from "./components/SimulateTab";
 import { BacktestTab } from "./components/BacktestTab";
 import { OptimizeTab } from "./components/OptimizeTab";
 import { ExecuteTab } from "./components/ExecuteTab";
+import { CommunityTab } from "./components/CommunityTab";
 import { track } from "./telemetry";
 import type { AppTab } from "./types/portfolio";
 
@@ -21,6 +22,7 @@ function AppContent() {
   const {
     experiment, allExperiments, isLoaded,
     updatePortfolio, saveSimulation, saveOptimization, saveBacktest,
+    saveDNA, saveTheses, saveScenario, setPublishedId,
     applyOptimizedWeights, switchExperiment, createExperiment,
     duplicateExperiment, deleteCurrentExperiment,
   } = useExperiment();
@@ -161,6 +163,14 @@ function AppContent() {
             assets={experiment.portfolio.assets}
             investmentAmount={experiment.lastSimulation?.config.initialInvestment ?? 100000}
           />
+        )}
+        {activeTab === "community" && (
+          <CommunityTab onFork={(portfolio) => {
+            // Fork creates a new experiment from community data
+            if (portfolio && typeof portfolio === 'object') {
+              createExperiment("Forked Experiment");
+            }
+          }} />
         )}
       </main>
 
