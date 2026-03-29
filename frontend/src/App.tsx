@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sun, Moon, Plus, ChevronDown, Copy, Trash2 } from "lucide-react";
 import { ThemeProvider, useTheme } from "./components/ThemeProvider";
 import { useExperiment } from "./store/useExperiment";
@@ -18,6 +18,14 @@ function AppContent() {
   const [activeTab, setActiveTab] = useState<AppTab>("build");
   const [isLoading] = useState(false);
   const [showExperiments, setShowExperiments] = useState(false);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    if (!showExperiments) return;
+    const handler = () => setShowExperiments(false);
+    document.addEventListener("click", handler);
+    return () => document.removeEventListener("click", handler);
+  }, [showExperiments]);
 
   const {
     experiment, allExperiments, isLoaded,
@@ -55,7 +63,7 @@ function AppContent() {
             {/* Experiment Selector */}
             <div className="relative ml-4">
               <button
-                onClick={() => setShowExperiments(!showExperiments)}
+                onClick={(e) => { e.stopPropagation(); setShowExperiments(!showExperiments); }}
                 className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-stone-100 dark:bg-slate-800/50 border border-stone-200 dark:border-slate-700/50 text-sm"
               >
                 <span className="font-medium text-stone-700 dark:text-slate-300 max-w-[200px] truncate">{experiment.name}</span>
@@ -82,6 +90,22 @@ function AppContent() {
                     </button>
                     <button onClick={() => { duplicateExperiment(); setShowExperiments(false); }} className="w-full text-left px-4 py-2 text-sm text-stone-500 dark:text-slate-400 hover:bg-stone-50 dark:hover:bg-slate-800/50 flex items-center gap-2">
                       <Copy className="w-3.5 h-3.5" /> Duplicate Current
+                    </button>
+                    <button onClick={async () => {
+                      try {
+                        const { publishExperiment } = await import("./api");
+                        const resp = await publishExperiment({
+                          name: experiment.name,
+                          portfolio: experiment.portfolio as any,
+                          metrics: experiment.lastSimulation?.result.portfolio_risk_metrics as any ?? {},
+                          dna: {},
+                        });
+                        setPublishedId(resp.id);
+                        setShowExperiments(false);
+                        alert("Published!");
+                      } catch (e) { console.error(e); }
+                    }} className="w-full text-left px-4 py-2 text-sm text-indigo-500 dark:text-indigo-400 hover:bg-stone-50 dark:hover:bg-slate-800/50 flex items-center gap-2">
+                      <span className="w-3.5 h-3.5 text-xs leading-none">&#9650;</span> Publish to Community
                     </button>
                     {allExperiments.length > 1 && (
                       <button onClick={() => { deleteCurrentExperiment(); setShowExperiments(false); }} className="w-full text-left px-4 py-2 text-sm text-red-500 hover:bg-stone-50 dark:hover:bg-slate-800/50 flex items-center gap-2">
@@ -129,6 +153,9 @@ function AppContent() {
             riskTolerance={experiment.portfolio.riskTolerance}
             onPortfolioChange={updatePortfolio}
             isLoading={isLoading}
+            theses={experiment.theses}
+            onThesesChange={saveTheses}
+            lastSimulationMetrics={experiment.lastSimulation?.result.portfolio_risk_metrics ?? null}
           />
         )}
         {activeTab === "simulate" && (

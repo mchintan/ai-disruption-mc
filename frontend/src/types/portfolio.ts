@@ -27,7 +27,7 @@ export interface SimulateRequest {
   correlation_matrix: number[][];
   num_simulations: number;
   num_years: number;
-  model: "gbm" | "merton";
+  model: "gbm" | "merton" | "regime";
   initial_investment: number;
   seed: number | null;
 }
@@ -88,7 +88,7 @@ export interface OptimizeRequest {
   correlation_matrix: number[][];
   num_simulations: number;
   num_years: number;
-  model: "gbm" | "merton";
+  model: "gbm" | "merton" | "regime";
   initial_investment: number;
   objective: OptimizationObjective;
   seed: number | null;
@@ -227,7 +227,7 @@ export type AppMode = "simulate" | "backtest";
 export interface SimConfig {
   numSimulations: number;
   numYears: number;
-  model: "gbm" | "merton";
+  model: "gbm" | "merton" | "regime";
   initialInvestment: number;
   seed: number | null;
 }
@@ -251,7 +251,7 @@ export interface PortfolioExperiment {
     config: {
       numSimulations: number;
       numYears: number;
-      model: "gbm" | "merton";
+      model: "gbm" | "merton" | "regime";
       initialInvestment: number;
       seed: number | null;
     };

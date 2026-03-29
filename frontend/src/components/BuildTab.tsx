@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { Sparkles, ChevronDown, ChevronUp, Loader2, Trash2, Plus, TrendingUp, Shield } from "lucide-react";
-import { analyzePortfolio } from "../api";
+import { Sparkles, ChevronDown, ChevronUp, Loader2, Trash2, Plus, TrendingUp, Shield, FileText, AlertTriangle, CheckCircle } from "lucide-react";
+import { analyzePortfolio, generateTheses, critiqueTheses } from "../api";
 import { track } from "../telemetry";
-import type { AssetParams } from "../types/portfolio";
+import type { AssetParams, Thesis } from "../types/portfolio";
 
 interface Props {
   assets: AssetParams[];
@@ -11,6 +11,9 @@ interface Props {
   riskTolerance: string;
   onPortfolioChange: (assets: AssetParams[], correlationMatrix: number[][], description?: string, riskTolerance?: string) => void;
   isLoading: boolean;
+  theses: Thesis[] | null;
+  onThesesChange: (theses: Thesis[]) => void;
+  lastSimulationMetrics: Record<string, number> | null;
 }
 
 const EXAMPLES = [
@@ -31,7 +34,8 @@ const ASSET_COLORS = [
   { text: "text-cyan-700 dark:text-teal-400", border: "border-cyan-300 dark:border-teal-500/30", bg: "bg-cyan-500 dark:bg-teal-500" },
 ];
 
-export function BuildTab({ assets, correlationMatrix, description, riskTolerance, onPortfolioChange, isLoading }: Props) {
+export function BuildTab(props: Props) {
+  const { assets, correlationMatrix, description, riskTolerance, onPortfolioChange, isLoading, onThesesChange } = props;
   const [aiSeedOpen, setAiSeedOpen] = useState(assets.length === 0);
   const [localDesc, setLocalDesc] = useState(description);
   const [localRisk, setLocalRisk] = useState(riskTolerance || "moderate");
@@ -39,6 +43,8 @@ export function BuildTab({ assets, correlationMatrix, description, riskTolerance
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [analysisSummary, setAnalysisSummary] = useState<string | null>(null);
+  const [thesisLoading, setThesisLoading] = useState(false);
+  const [critiqueLoading, setCritiqueLoading] = useState(false);
 
   // Local copy of assets for editing
   const [localAssets, setLocalAssets] = useState<AssetParams[]>(assets);
@@ -52,6 +58,25 @@ export function BuildTab({ assets, correlationMatrix, description, riskTolerance
     setLocalAssets(assets);
     setLocalCorrelation(correlationMatrix);
   }
+
+  const handleGenerateTheses = async () => {
+    setThesisLoading(true);
+    try {
+      const result = await generateTheses({ assets: localAssets, description: localDesc, risk_tolerance: localRisk });
+      onThesesChange(result.theses as Thesis[]);
+    } catch (e) { console.error(e); }
+    finally { setThesisLoading(false); }
+  };
+
+  const handleCritiqueTheses = async () => {
+    if (!props.theses || !props.lastSimulationMetrics) return;
+    setCritiqueLoading(true);
+    try {
+      const result = await critiqueTheses({ theses: props.theses, risk_metrics: props.lastSimulationMetrics });
+      onThesesChange(result.theses as Thesis[]);
+    } catch (e) { console.error(e); }
+    finally { setCritiqueLoading(false); }
+  };
 
   const handleGenerate = async () => {
     if (localDesc.trim().length < 10) return;
@@ -335,6 +360,59 @@ export function BuildTab({ assets, correlationMatrix, description, riskTolerance
             <Plus className="w-4 h-4" />
             Add Asset
           </button>
+
+          {/* Investment Theses */}
+          {localAssets.length > 0 && (
+            <div className="bg-white dark:bg-slate-900/50 border border-stone-200 dark:border-slate-700/30 rounded-xl p-5 mt-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  <h3 className="text-sm font-mono font-semibold text-emerald-600 dark:text-emerald-400">Investment Theses</h3>
+                </div>
+                <div className="flex gap-2">
+                  {props.theses && props.lastSimulationMetrics && (
+                    <button onClick={handleCritiqueTheses} disabled={critiqueLoading}
+                      className="px-3 py-1.5 rounded-lg bg-amber-50 text-amber-600 border border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/30 text-xs font-medium disabled:opacity-50">
+                      {critiqueLoading ? "Critiquing..." : "Critique Theses"}
+                    </button>
+                  )}
+                  <button onClick={handleGenerateTheses} disabled={thesisLoading}
+                    className="px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-600 border border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/30 text-xs font-medium disabled:opacity-50">
+                    {thesisLoading ? "Generating..." : props.theses ? "Regenerate" : "Generate Theses"}
+                  </button>
+                </div>
+              </div>
+              {props.theses && props.theses.length > 0 && (
+                <div className="space-y-3">
+                  {props.theses.map((t, i) => (
+                    <div key={i} className="bg-stone-50 dark:bg-slate-800/30 border border-stone-200 dark:border-slate-700/30 rounded-lg p-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="font-mono font-bold text-sm text-stone-900 dark:text-slate-200">{t.asset_ticker}</span>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                          t.status === "valid" ? "bg-green-100 text-green-700 dark:bg-green-500/10 dark:text-green-400" :
+                          t.status === "weakening" ? "bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400" :
+                          "bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-400"
+                        }`}>
+                          {t.status === "valid" && <CheckCircle className="w-3 h-3 inline mr-0.5" />}
+                          {t.status === "weakening" && <AlertTriangle className="w-3 h-3 inline mr-0.5" />}
+                          {t.status}
+                        </span>
+                      </div>
+                      <p className="text-xs text-stone-600 dark:text-slate-300 mb-2">{t.narrative}</p>
+                      {t.key_assumptions.length > 0 && (
+                        <div className="text-[10px] text-stone-400 dark:text-slate-500">
+                          <span className="font-semibold">Assumptions:</span> {t.key_assumptions.join(" · ")}
+                        </div>
+                      )}
+                      {t.critique && (
+                        <div className="mt-2 text-xs text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/5 rounded p-2 italic">{t.critique}</div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </>
       )}
 

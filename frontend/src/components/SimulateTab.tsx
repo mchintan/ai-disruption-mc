@@ -2,15 +2,17 @@ import { useState } from "react";
 import {
   BarChart3, TrendingDown, TrendingUp, Activity,
   Settings, Loader2, Play, ChevronDown, ChevronUp,
+  Fingerprint,
 } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   LineChart, Line, Legend,
+  RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
 } from "recharts";
 import { useTheme } from "./ThemeProvider";
-import { runSimulation } from "../api";
+import { runSimulation, analyzeDNA } from "../api";
 import { track } from "../telemetry";
-import type { AssetParams, SimConfig, SimulateResponse } from "../types/portfolio";
+import type { AssetParams, SimConfig, SimulateResponse, DNAResponse } from "../types/portfolio";
 
 interface Props {
   assets: AssetParams[];
@@ -47,11 +49,13 @@ export function SimulateTab({ assets, correlationMatrix, lastSimulation, onSimul
   const [configOpen, setConfigOpen] = useState(!lastSimulation);
   const [numSimulations, setNumSimulations] = useState(lastSimulation?.config.numSimulations ?? 500);
   const [numYears, setNumYears] = useState(lastSimulation?.config.numYears ?? 10);
-  const [model, setModel] = useState<"gbm" | "merton">(lastSimulation?.config.model ?? "merton");
+  const [model, setModel] = useState<"gbm" | "merton" | "regime">(lastSimulation?.config.model ?? "merton");
   const [initialInvestment, setInitialInvestment] = useState(lastSimulation?.config.initialInvestment ?? 100000);
   const [seed, setSeed] = useState<number | null>(lastSimulation?.config.seed ?? 42);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [dna, setDna] = useState<DNAResponse | null>(null);
+  const [dnaLoading, setDnaLoading] = useState(false);
 
   const handleRun = async () => {
     setIsLoading(true);
@@ -74,6 +78,18 @@ export function SimulateTab({ assets, correlationMatrix, lastSimulation, onSimul
       setError(err instanceof Error ? err.message : "Simulation failed");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleAnalyzeDNA = async () => {
+    setDnaLoading(true);
+    try {
+      const result = await analyzeDNA({ assets, correlation_matrix: correlationMatrix });
+      setDna(result as DNAResponse);
+    } catch (e) {
+      console.error("DNA analysis failed:", e);
+    } finally {
+      setDnaLoading(false);
     }
   };
 
@@ -107,7 +123,7 @@ export function SimulateTab({ assets, correlationMatrix, lastSimulation, onSimul
             </span>
             {sim && (
               <span className="text-xs text-stone-400 dark:text-slate-500 ml-2">
-                {sim.model_used === "merton" ? "Merton" : "GBM"} &middot; {sim.num_simulations.toLocaleString()} paths &middot; {sim.num_years}yr
+                {sim.model_used === "merton" ? "Merton" : sim.model_used === "regime" ? "Regime" : "GBM"} &middot; {sim.num_simulations.toLocaleString()} paths &middot; {sim.num_years}yr
               </span>
             )}
           </div>
@@ -122,7 +138,7 @@ export function SimulateTab({ assets, correlationMatrix, lastSimulation, onSimul
                 <label className="block text-xs font-mono font-semibold text-stone-500 dark:text-slate-500 uppercase tracking-wider mb-3">
                   Simulation Model
                 </label>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-3">
                   <button
                     onClick={() => setModel("gbm")}
                     className={`p-4 rounded-xl border text-left transition-all ${
@@ -150,6 +166,20 @@ export function SimulateTab({ assets, correlationMatrix, lastSimulation, onSimul
                     </div>
                     <div className="text-xs text-stone-500 dark:text-slate-500 font-mono">dS/S = (&mu;-&lambda;k)dt + &sigma;dW + JdN</div>
                     <div className="text-xs text-stone-400 dark:text-slate-600 mt-2">Adds Poisson jumps for crashes and spikes. More realistic for volatile assets.</div>
+                  </button>
+                  <button
+                    onClick={() => setModel("regime")}
+                    className={`p-4 rounded-xl border text-left transition-all ${
+                      model === "regime"
+                        ? "bg-emerald-50 border-emerald-200 dark:bg-emerald-500/10 dark:border-emerald-500/30"
+                        : "bg-white border-stone-200 hover:border-stone-300 dark:bg-slate-900/30 dark:border-slate-700/30 dark:hover:border-slate-600/50"
+                    }`}
+                  >
+                    <div className={`text-sm font-semibold mb-1 ${model === "regime" ? "text-emerald-700 dark:text-emerald-400" : "text-stone-700 dark:text-slate-300"}`}>
+                      Regime Switching
+                    </div>
+                    <div className="text-xs text-stone-500 dark:text-slate-500 font-mono">Markov chain regimes</div>
+                    <div className="text-xs text-stone-400 dark:text-slate-600 mt-2">Bull, bear, crisis, recovery. Dynamic regime transitions per timestep.</div>
                   </button>
                 </div>
               </div>
@@ -338,6 +368,55 @@ export function SimulateTab({ assets, correlationMatrix, lastSimulation, onSimul
               </div>
             </div>
           )}
+
+          {/* Portfolio DNA */}
+          <div className="bg-white dark:bg-slate-900/50 border border-stone-200 dark:border-slate-700/30 rounded-xl p-6 mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Fingerprint className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                <h3 className="text-sm font-mono font-semibold text-indigo-600 dark:text-indigo-400">Portfolio DNA</h3>
+              </div>
+              <button
+                onClick={handleAnalyzeDNA}
+                disabled={dnaLoading}
+                className="px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-600 border border-indigo-200 dark:bg-indigo-500/10 dark:text-indigo-400 dark:border-indigo-500/30 text-xs font-medium hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors disabled:opacity-50"
+              >
+                {dnaLoading ? "Analyzing..." : dna ? "Refresh" : "Analyze DNA"}
+              </button>
+            </div>
+            {dna && (
+              <div className="grid grid-cols-2 gap-6">
+                <div className="flex justify-center">
+                  <RadarChart width={280} height={250} data={[
+                    { dim: "Growth", score: dna.scores.growth },
+                    { dim: "Volatility", score: dna.scores.volatility },
+                    { dim: "Tail Risk", score: dna.scores.tail_risk },
+                    { dim: "Diverse", score: dna.scores.diversification },
+                    { dim: "Focus", score: dna.scores.concentration },
+                    { dim: "Defensive", score: dna.scores.defensive },
+                    { dim: "Momentum", score: dna.scores.momentum },
+                    { dim: "Resilience", score: dna.scores.crisis_resilience },
+                  ]}>
+                    <PolarGrid stroke={chartGrid} />
+                    <PolarAngleAxis dataKey="dim" tick={{ fontSize: 10, fill: chartAxis }} />
+                    <PolarRadiusAxis angle={90} domain={[0, 100]} tick={{ fontSize: 9, fill: chartAxis }} />
+                    <Radar name="DNA" dataKey="score" stroke={isDark ? "#818cf8" : "#6366f1"} fill={isDark ? "#818cf8" : "#6366f1"} fillOpacity={0.2} />
+                  </RadarChart>
+                </div>
+                <div>
+                  <p className="text-sm text-stone-700 dark:text-slate-300 leading-relaxed mb-4">{dna.personality}</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {Object.entries(dna.scores).map(([key, val]) => (
+                      <div key={key} className="flex justify-between items-center py-1 border-b border-stone-100 dark:border-slate-800/30">
+                        <span className="text-xs text-stone-500 dark:text-slate-500 capitalize">{key.replace(/_/g, " ")}</span>
+                        <span className="text-xs font-mono font-semibold text-stone-900 dark:text-slate-200">{val}/100</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </>
       )}
 
