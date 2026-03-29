@@ -1,4 +1,4 @@
-import { Hammer, Play, History, Target, Wallet } from "lucide-react";
+import { Hammer, Play, History, Target, Wallet, Users } from "lucide-react";
 import type { AppTab } from "../types/portfolio";
 
 interface Props {
@@ -14,6 +14,7 @@ const TABS: { key: AppTab; label: string; icon: React.ReactNode; requiresPortfol
   { key: "backtest", label: "Backtest", icon: <History className="w-4 h-4" />, requiresPortfolio: false },
   { key: "optimize", label: "Optimize", icon: <Target className="w-4 h-4" />, requiresPortfolio: true },
   { key: "execute", label: "Execute", icon: <Wallet className="w-4 h-4" />, requiresPortfolio: true },
+  { key: "community" as AppTab, label: "Community", icon: <Users className="w-4 h-4" />, requiresPortfolio: false },
 ];
 
 export function WorkspaceTabs({ activeTab, onTabChange, hasPortfolio, hasSimulation }: Props) {
