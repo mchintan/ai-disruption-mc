@@ -24,13 +24,13 @@ export function PortfolioBar({ assets, totalAllocation, onEditClick }: Props) {
   return (
     <div className="border-b border-stone-200 dark:border-slate-800/50 bg-white/60 dark:bg-slate-900/30 backdrop-blur-sm">
       <div className="max-w-7xl mx-auto px-6 py-2 flex items-center gap-3">
-        <div className="flex items-center gap-1.5 flex-wrap flex-1 min-w-0">
+        <div className="flex items-center gap-1.5 flex-1 min-w-0 overflow-x-auto whitespace-nowrap">
           {assets.map((asset, i) => {
             const color = ASSET_CHIP_COLORS[i % ASSET_CHIP_COLORS.length];
             return (
               <span
                 key={`${asset.ticker}-${i}`}
-                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-mono font-semibold border ${color.bg} ${color.text} ${color.border}`}
+                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-mono font-semibold border flex-shrink-0 ${color.bg} ${color.text} ${color.border}`}
               >
                 {asset.ticker}
                 <span className="opacity-60">{asset.allocation_pct.toFixed(0)}%</span>

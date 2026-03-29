@@ -233,7 +233,7 @@ export interface SimConfig {
 }
 
 // Workspace navigation
-export type AppTab = "build" | "simulate" | "backtest" | "optimize" | "execute" | "community";
+export type AppTab = "plan" | "test" | "act";
 
 // Portfolio experiment (persisted to IndexedDB)
 export interface PortfolioExperiment {

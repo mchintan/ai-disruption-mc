@@ -39,48 +39,40 @@ Every competitor is closed-source and covers 2-3 of these capabilities. This is 
 
 ## Screenshots
 
-### Build — AI Portfolio Generator
+### Plan — Quick Start Presets + AI Portfolio Builder
 
-Describe goals in natural language. AI recommends assets with calibrated parameters. Edit everything.
+Pick a preset or describe your goals. AI builds the portfolio.
 
-![Build Tab](docs/build-tab.png)
-![Build Tab — Portfolio](docs/build-tab-portfolio.png)
+![Plan Phase](docs/plan-phase.png)
 
-### Simulate — Monte Carlo Engine
+Portfolio output with health grade, human-readable risk labels, and asset rationale.
 
-GBM or Merton Jump Diffusion. Fan charts, sample paths, VaR, CVaR, Sharpe, max drawdown.
+![Plan — Portfolio](docs/plan-portfolio.png)
+![Plan — Assets](docs/plan-assets.png)
 
-![Simulate Tab — Config](docs/simulate-tab-config.png)
-![Simulate Tab — Results](docs/simulate-tab-results.png)
-![Simulate Tab — Details](docs/simulate-tab-details.png)
+### Test — Simulate, Optimize, Stress-Test (One Page)
 
-### Optimize — Weight Optimization
+Run simulations, optimize weights, and test against crises — all inline, no tab-hopping.
 
-5 objectives. One-click apply. Re-simulate instantly.
+![Test — Config](docs/test-config.png)
+![Test — Results](docs/test-results.png)
+![Test — Charts](docs/test-charts.png)
+![Test — Optimize & Backtest](docs/test-optimize-backtest.png)
 
-![Optimize Tab](docs/optimize-tab.png)
+### Act — Execute Trades + Community
 
-### Backtest — Historical Crisis Stress Test
+Connect a broker, execute, and discover community portfolios.
 
-6 crises. Crisis-calibrated parameters. Full analytics.
+![Act Phase](docs/act-phase.png)
 
-![Backtest Tab](docs/backtest-tab.png)
+### Mobile
 
-### Execute — Brokerage Integration
+Fully responsive. 2x2 preset grids, stacked layouts, scrollable portfolio bar.
 
-Alpaca OAuth. Trade list. Paper or live. Safety gates.
-
-![Execute Tab](docs/execute-tab.png)
-
-### Community — Shared Experiments
-
-Publish portfolios. Browse the feed. Fork and compare.
-
-![Community Tab](docs/tab-community.png)
+![Mobile — Plan](docs/mobile-plan.png)
+![Mobile — Portfolio](docs/mobile-portfolio.png)
 
 ### Dark Mode
-
-Full dark theme.
 
 ![Dark Mode](docs/dark-mode.png)
 
@@ -90,16 +82,13 @@ Full dark theme.
 
 <br>
 
-## Six Tabs. One Workspace.
+## Three Phases. One Workspace.
 
-| Tab | What it does |
-|-----|-------------|
-| **Build** | Describe goals in natural language. AI recommends assets with calibrated drift, volatility, and jump parameters. Edit everything. |
-| **Simulate** | Run Monte Carlo (GBM or Merton Jump Diffusion). Fan charts, sample paths, VaR, CVaR, Sharpe, max drawdown, per-asset breakdown. |
-| **Backtest** | Stress-test against 6 historical crises — COVID-19, 2022 Crypto Winter, GFC 2008, Dot-Com Bust, and more. |
-| **Optimize** | Find optimal weights across 5 objectives (max Sharpe, min VaR, min CVaR, min drawdown, max return). **Apply with one click.** |
-| **Execute** | Connect Alpaca via OAuth. Generate trade list from target vs current holdings. Review. Submit. Paper or live. |
-| **Community** | Browse published experiments. Fork portfolios. Leaderboard by Sharpe, return, drawdown. |
+| Phase | What it does |
+|-------|-------------|
+| **Plan** | Pick a preset or describe goals in natural language. AI builds a portfolio with calibrated parameters. Portfolio health grade. Investment theses. |
+| **Test** | Simulate (standard, crash modeling, or dynamic conditions). Inline optimizer ("Can it be better?"). Inline crisis backtest ("What if 2008 happened?"). Portfolio grade. All on one page. |
+| **Act** | Connect Alpaca via OAuth. Generate trade list. Execute. Browse community portfolios. Fork others' experiments. |
 
 A persistent **portfolio bar** shows current allocations across all tabs. Switching tabs never destroys state.
 

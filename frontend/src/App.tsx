@@ -4,19 +4,15 @@ import { ThemeProvider, useTheme } from "./components/ThemeProvider";
 import { useExperiment } from "./store/useExperiment";
 import { PortfolioBar } from "./components/PortfolioBar";
 import { WorkspaceTabs } from "./components/WorkspaceTabs";
-import { BuildTab } from "./components/BuildTab";
-import { SimulateTab } from "./components/SimulateTab";
-import { BacktestTab } from "./components/BacktestTab";
-import { OptimizeTab } from "./components/OptimizeTab";
-import { ExecuteTab } from "./components/ExecuteTab";
-import { CommunityTab } from "./components/CommunityTab";
+import { PlanPhase } from "./components/PlanPhase";
+import { TestPhase } from "./components/TestPhase";
+import { ActPhase } from "./components/ActPhase";
 import { track } from "./telemetry";
 import type { AppTab } from "./types/portfolio";
 
 function AppContent() {
   const { theme, toggleTheme } = useTheme();
-  const [activeTab, setActiveTab] = useState<AppTab>("build");
-  const [isLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<AppTab>("plan");
   const [showExperiments, setShowExperiments] = useState(false);
 
   // Close dropdown on outside click
@@ -30,7 +26,7 @@ function AppContent() {
   const {
     experiment, allExperiments, isLoaded,
     updatePortfolio, saveSimulation, saveOptimization, saveBacktest,
-    saveTheses, setPublishedId,
+    saveTheses, saveDNA, setPublishedId,
     applyOptimizedWeights, switchExperiment, createExperiment,
     duplicateExperiment, deleteCurrentExperiment,
   } = useExperiment();
@@ -40,7 +36,6 @@ function AppContent() {
   }
 
   const hasPortfolio = experiment.portfolio.assets.length > 0;
-  const hasSimulation = !!experiment.lastSimulation;
 
   const handleTabChange = (tab: AppTab) => {
     setActiveTab(tab);
@@ -130,7 +125,7 @@ function AppContent() {
         <PortfolioBar
           assets={experiment.portfolio.assets}
           totalAllocation={experiment.portfolio.assets.reduce((s, a) => s + a.allocation_pct, 0)}
-          onEditClick={() => setActiveTab("build")}
+          onEditClick={() => setActiveTab("plan")}
         />
       )}
 
@@ -140,64 +135,49 @@ function AppContent() {
           activeTab={activeTab}
           onTabChange={handleTabChange}
           hasPortfolio={hasPortfolio}
-          hasSimulation={hasSimulation}
         />
       </div>
 
       {/* Tab Content */}
       <main className="max-w-7xl mx-auto px-6 py-6">
-        {activeTab === "build" && (
-          <BuildTab
+        {activeTab === "plan" && (
+          <PlanPhase
             assets={experiment.portfolio.assets}
             correlationMatrix={experiment.portfolio.correlationMatrix}
             description={experiment.portfolio.description}
             riskTolerance={experiment.portfolio.riskTolerance}
             onPortfolioChange={updatePortfolio}
-            isLoading={isLoading}
             theses={experiment.theses}
             onThesesChange={saveTheses}
             lastSimulationMetrics={(experiment.lastSimulation?.result.portfolio_risk_metrics as unknown as Record<string, number>) ?? null}
+            dna={experiment.lastDNA}
+            onDNAChange={saveDNA}
+            onGoToTest={() => setActiveTab("test")}
           />
         )}
-        {activeTab === "simulate" && (
-          <SimulateTab
-            assets={experiment.portfolio.assets}
-            correlationMatrix={experiment.portfolio.correlationMatrix}
-            lastSimulation={experiment.lastSimulation}
-            onSimulationComplete={saveSimulation}
-          />
-        )}
-        {activeTab === "backtest" && (
-          <BacktestTab
-            assets={experiment.portfolio.assets}
-            lastBacktest={experiment.lastBacktest}
-            onBacktestComplete={saveBacktest}
-            onUseInPortfolio={(assets) => { updatePortfolio(assets, experiment.portfolio.correlationMatrix); setActiveTab("build"); }}
-          />
-        )}
-        {activeTab === "optimize" && (
-          <OptimizeTab
+        {activeTab === "test" && (
+          <TestPhase
             assets={experiment.portfolio.assets}
             correlationMatrix={experiment.portfolio.correlationMatrix}
             lastSimulation={experiment.lastSimulation}
             lastOptimization={experiment.lastOptimization}
+            lastBacktest={experiment.lastBacktest}
+            dna={experiment.lastDNA}
+            onSimulationComplete={saveSimulation}
             onOptimizationComplete={saveOptimization}
-            onApplyWeights={() => { applyOptimizedWeights(); setActiveTab("build"); }}
+            onApplyWeights={() => { applyOptimizedWeights(); setActiveTab("plan"); }}
+            onBacktestComplete={saveBacktest}
+            onDNAComplete={saveDNA}
           />
         )}
-        {activeTab === "execute" && (
-          <ExecuteTab
+        {activeTab === "act" && (
+          <ActPhase
             assets={experiment.portfolio.assets}
             investmentAmount={experiment.lastSimulation?.config.initialInvestment ?? 100000}
+            onFork={(portfolio) => {
+              if (portfolio) createExperiment("Forked Experiment");
+            }}
           />
-        )}
-        {activeTab === "community" && (
-          <CommunityTab onFork={(portfolio) => {
-            // Fork creates a new experiment from community data
-            if (portfolio && typeof portfolio === 'object') {
-              createExperiment("Forked Experiment");
-            }
-          }} />
         )}
       </main>
 
