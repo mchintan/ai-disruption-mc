@@ -22,7 +22,6 @@ function AppContent() {
   const {
     experiment, allExperiments, isLoaded,
     updatePortfolio, saveSimulation, saveOptimization, saveBacktest,
-    saveDNA, saveTheses, saveScenario, setPublishedId,
     applyOptimizedWeights, switchExperiment, createExperiment,
     duplicateExperiment, deleteCurrentExperiment,
   } = useExperiment();
