@@ -30,6 +30,7 @@ function AppContent() {
   const {
     experiment, allExperiments, isLoaded,
     updatePortfolio, saveSimulation, saveOptimization, saveBacktest,
+    saveTheses, setPublishedId,
     applyOptimizedWeights, switchExperiment, createExperiment,
     duplicateExperiment, deleteCurrentExperiment,
   } = useExperiment();
@@ -155,7 +156,7 @@ function AppContent() {
             isLoading={isLoading}
             theses={experiment.theses}
             onThesesChange={saveTheses}
-            lastSimulationMetrics={experiment.lastSimulation?.result.portfolio_risk_metrics ?? null}
+            lastSimulationMetrics={(experiment.lastSimulation?.result.portfolio_risk_metrics as unknown as Record<string, number>) ?? null}
           />
         )}
         {activeTab === "simulate" && (
