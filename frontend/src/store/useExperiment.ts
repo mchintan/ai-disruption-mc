@@ -93,7 +93,7 @@ export function useExperiment() {
     });
   }, [experiment, persist]);
 
-  const saveSimulation = useCallback((config: { numSimulations: number; numYears: number; model: "gbm" | "merton"; initialInvestment: number; seed: number | null }, result: SimulateResponse) => {
+  const saveSimulation = useCallback((config: { numSimulations: number; numYears: number; model: "gbm" | "merton" | "regime"; initialInvestment: number; seed: number | null }, result: SimulateResponse) => {
     if (!experiment) return;
     persist({ ...experiment, lastSimulation: { config, result } });
   }, [experiment, persist]);
