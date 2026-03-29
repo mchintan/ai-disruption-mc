@@ -10,3 +10,5 @@ __pycache__
 telemetry.db
 tokens.db
 community.db
+.claude
+package-lock.json
