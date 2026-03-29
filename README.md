@@ -72,6 +72,18 @@ Alpaca OAuth. Trade list. Paper or live. Safety gates.
 
 ![Execute Tab](docs/execute-tab.png)
 
+### Community — Shared Experiments
+
+Publish portfolios. Browse the feed. Fork and compare.
+
+![Community Tab](docs/tab-community.png)
+
+### Dark Mode
+
+Full dark theme.
+
+![Dark Mode](docs/dark-mode.png)
+
 <br>
 
 ---
