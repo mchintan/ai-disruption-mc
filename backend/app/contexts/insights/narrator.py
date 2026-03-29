@@ -88,7 +88,7 @@ def explain_optimization(
                 opt_dd=optimized_metrics["max_drawdown"],
             )
             response = client.models.generate_content(
-                model="gemini-2.0-flash",
+                model="gemini-2.5-flash",
                 contents=prompt,
             )
             return response.text.strip()

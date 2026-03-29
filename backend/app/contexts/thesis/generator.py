@@ -44,7 +44,7 @@ def generate_theses(assets: list[dict], description: str, risk_tolerance: str) -
             prompt = THESIS_PROMPT.format(
                 description=description, risk_tolerance=risk_tolerance, assets_text=assets_text
             )
-            response = client.models.generate_content(model="gemini-2.0-flash", contents=prompt)
+            response = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
             text = response.text.strip()
             if text.startswith("```"):
                 text = re.sub(r"^```(?:json)?\s*", "", text)

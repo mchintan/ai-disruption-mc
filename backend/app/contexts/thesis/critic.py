@@ -52,7 +52,7 @@ def critique_theses(theses: list[dict], risk_metrics: dict) -> list[dict]:
                 max_drawdown=risk_metrics.get("max_drawdown", 0),
                 var_95=risk_metrics.get("var_95", 0),
             )
-            response = client.models.generate_content(model="gemini-2.0-flash", contents=prompt)
+            response = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
             text = response.text.strip()
             if text.startswith("```"):
                 text = re.sub(r"^```(?:json)?\s*", "", text)

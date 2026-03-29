@@ -26,7 +26,7 @@ def generate_personality(scores: dict[str, float]) -> str:
         try:
             client = genai.Client(api_key=api_key)
             prompt = DNA_PROMPT.format(**scores)
-            response = client.models.generate_content(model="gemini-2.0-flash", contents=prompt)
+            response = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
             return response.text.strip()
         except Exception as e:
             print(f"DNA narrator error: {e}")
