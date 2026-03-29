@@ -2,7 +2,30 @@
 
 > Describe a portfolio in plain English. Simulate it. Stress-test it. Optimize the weights. Execute the trades.
 
-An AI-powered portfolio simulation platform built on Monte Carlo methods (GBM and Merton Jump Diffusion) with a tab-based workspace that auto-saves experiments.
+An open-source portfolio simulation platform built on Monte Carlo methods (GBM and Merton Jump Diffusion) with a tab-based workspace that auto-saves experiments.
+
+<br>
+
+## Why This Exists
+
+Tools for each piece of the investment workflow already exist. None connect them.
+
+| | NLP to Portfolio | Monte Carlo Sim | Crisis Backtest | Weight Optimizer | Trade Execution | Open Source |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|
+| **This project** | **Yes** | **Yes** | **Yes** | **Yes** | **Yes** | **Yes** |
+| [Composer](https://www.composer.trade/) | Yes | — | Yes | — | Yes | No |
+| [StressTest.pro](https://stresstest.pro/) | — | Yes | Yes | Yes | — | No |
+| [Portfolio Visualizer](https://www.portfoliovisualizer.com/) | — | Yes | Yes | Yes | — | No |
+| [PortfolioPilot](https://portfoliopilot.com/) | Yes | — | — | — | Partial | No |
+
+Every competitor is closed-source and covers 2-3 of these capabilities. This is the only platform that runs the **entire pipeline** — from natural language description to executed trades — in one open-source workspace.
+
+**What makes it different:**
+
+- **Full pipeline, connected** — optimize weights and apply them back to the portfolio with one click. Backtest a crisis and forward-simulate the same portfolio instantly. Execute what you just simulated.
+- **Open source, self-hostable** — no vendor lock-in. Fork it. Extend it. Deploy on your own infrastructure.
+- **Enterprise architecture** — bounded contexts, provider abstraction for brokers, built-in observability with funnel analytics, OTEL-exportable telemetry. Designed for teams, not just individuals.
+- **Experiment management** — save, compare, duplicate, restore portfolio experiments. Every competitor treats each session as disposable.
 
 <br>
 
