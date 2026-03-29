@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import type { AssetParams, SimulateResponse, OptimizeResponse, BacktestResponse, PortfolioExperiment, DNAResponse, Thesis, CustomScenario } from "../types/portfolio";
 import {
   saveExperiment,
@@ -37,6 +37,7 @@ export function createBlankExperiment(name: string = "New Experiment"): Portfoli
 
 export function useExperiment() {
   const [experiment, setExperiment] = useState<PortfolioExperiment | null>(null);
+  const experimentRef = useRef<PortfolioExperiment | null>(null);
   const [allExperiments, setAllExperiments] = useState<PortfolioExperiment[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
@@ -49,6 +50,7 @@ export function useExperiment() {
       if (activeId) {
         const exp = await getExperiment(activeId);
         if (exp) {
+          experimentRef.current = exp;
           setExperiment(exp);
           setIsLoaded(true);
           return;
@@ -58,6 +60,7 @@ export function useExperiment() {
       const blank = createBlankExperiment();
       await saveExperiment(blank);
       setActiveExperimentId(blank.id);
+      experimentRef.current = blank;
       setExperiment(blank);
       setAllExperiments(prev => [blank, ...prev]);
       setIsLoaded(true);
@@ -66,6 +69,7 @@ export function useExperiment() {
 
   // Auto-save whenever experiment changes
   const persist = useCallback(async (exp: PortfolioExperiment) => {
+    experimentRef.current = exp;
     setExperiment(exp);
     await saveExperiment(exp);
     setAllExperiments(prev => {
@@ -80,70 +84,80 @@ export function useExperiment() {
   }, []);
 
   const updatePortfolio = useCallback((assets: AssetParams[], correlationMatrix: number[][], description?: string, riskTolerance?: string) => {
-    if (!experiment) return;
+    const current = experimentRef.current;
+    if (!current) return;
     persist({
-      ...experiment,
+      ...current,
       portfolio: {
-        ...experiment.portfolio,
+        ...current.portfolio,
         assets,
         correlationMatrix,
         ...(description !== undefined && { description }),
         ...(riskTolerance !== undefined && { riskTolerance }),
       },
     });
-  }, [experiment, persist]);
+  }, [persist]);
 
   const saveSimulation = useCallback((config: { numSimulations: number; numYears: number; model: "gbm" | "merton" | "regime"; initialInvestment: number; seed: number | null }, result: SimulateResponse) => {
-    if (!experiment) return;
-    persist({ ...experiment, lastSimulation: { config, result } });
-  }, [experiment, persist]);
+    const current = experimentRef.current;
+    if (!current) return;
+    persist({ ...current, lastSimulation: { config, result } });
+  }, [persist]);
 
   const saveOptimization = useCallback((result: OptimizeResponse) => {
-    if (!experiment) return;
-    persist({ ...experiment, lastOptimization: result });
-  }, [experiment, persist]);
+    const current = experimentRef.current;
+    if (!current) return;
+    persist({ ...current, lastOptimization: result });
+  }, [persist]);
 
   const saveBacktest = useCallback((crisisId: string, config: { numSimulations: number; initialInvestment: number; model: string; rebalance: boolean }, result: BacktestResponse) => {
-    if (!experiment) return;
-    persist({ ...experiment, lastBacktest: { crisisId, config, result } });
-  }, [experiment, persist]);
+    const current = experimentRef.current;
+    if (!current) return;
+    persist({ ...current, lastBacktest: { crisisId, config, result } });
+  }, [persist]);
 
   const saveDNA = useCallback((dna: DNAResponse) => {
-    if (!experiment) return;
-    persist({ ...experiment, lastDNA: dna });
-  }, [experiment, persist]);
+    const current = experimentRef.current;
+    if (!current) return;
+    persist({ ...current, lastDNA: dna });
+  }, [persist]);
 
   const saveTheses = useCallback((theses: Thesis[]) => {
-    if (!experiment) return;
-    persist({ ...experiment, theses });
-  }, [experiment, persist]);
+    const current = experimentRef.current;
+    if (!current) return;
+    persist({ ...current, theses });
+  }, [persist]);
 
   const saveScenario = useCallback((description: string, scenario: CustomScenario, result: BacktestResponse) => {
-    if (!experiment) return;
-    persist({ ...experiment, lastScenario: { description, scenario, result } });
-  }, [experiment, persist]);
+    const current = experimentRef.current;
+    if (!current) return;
+    persist({ ...current, lastScenario: { description, scenario, result } });
+  }, [persist]);
 
   const setPublishedId = useCallback((id: string) => {
-    if (!experiment) return;
-    persist({ ...experiment, publishedId: id });
-  }, [experiment, persist]);
+    const current = experimentRef.current;
+    if (!current) return;
+    persist({ ...current, publishedId: id });
+  }, [persist]);
 
   const applyOptimizedWeights = useCallback(() => {
-    if (!experiment?.lastOptimization) return;
-    const newAssets = experiment.portfolio.assets.map(asset => {
-      const w = experiment.lastOptimization!.weights.find(w => w.ticker === asset.ticker);
+    const current = experimentRef.current;
+    if (!current?.lastOptimization) return;
+    const newAssets = current.portfolio.assets.map(asset => {
+      const w = current.lastOptimization!.weights.find(w => w.ticker === asset.ticker);
       return w ? { ...asset, allocation_pct: w.optimal_pct } : asset;
     });
     persist({
-      ...experiment,
-      portfolio: { ...experiment.portfolio, assets: newAssets },
+      ...current,
+      portfolio: { ...current.portfolio, assets: newAssets },
       lastSimulation: null, // invalidate since weights changed
     });
-  }, [experiment, persist]);
+  }, [persist]);
 
   const switchExperiment = useCallback(async (id: string) => {
     const exp = await getExperiment(id);
     if (exp) {
+      experimentRef.current = exp;
       setExperiment(exp);
       setActiveExperimentId(id);
     }
@@ -153,11 +167,13 @@ export function useExperiment() {
     const blank = createBlankExperiment(name);
     await saveExperiment(blank);
     setActiveExperimentId(blank.id);
+    experimentRef.current = blank;
     setExperiment(blank);
     setAllExperiments(prev => [blank, ...prev]);
   }, []);
 
   const duplicateExperiment = useCallback(async () => {
+    const experiment = experimentRef.current;
     if (!experiment) return;
     const dup: PortfolioExperiment = {
       ...experiment,
@@ -168,31 +184,36 @@ export function useExperiment() {
     };
     await saveExperiment(dup);
     setActiveExperimentId(dup.id);
+    experimentRef.current = dup;
     setExperiment(dup);
     setAllExperiments(prev => [dup, ...prev]);
-  }, [experiment]);
+  }, []);
 
   const deleteCurrentExperiment = useCallback(async () => {
-    if (!experiment) return;
-    await removeExperiment(experiment.id);
-    const remaining = allExperiments.filter(e => e.id !== experiment.id);
+    const current = experimentRef.current;
+    if (!current) return;
+    await removeExperiment(current.id);
+    const remaining = allExperiments.filter(e => e.id !== current.id);
     setAllExperiments(remaining);
     if (remaining.length > 0) {
+      experimentRef.current = remaining[0];
       setExperiment(remaining[0]);
       setActiveExperimentId(remaining[0].id);
     } else {
       const blank = createBlankExperiment();
       await saveExperiment(blank);
       setActiveExperimentId(blank.id);
+      experimentRef.current = blank;
       setExperiment(blank);
       setAllExperiments([blank]);
     }
-  }, [experiment, allExperiments]);
+  }, [allExperiments]);
 
   const renameExperiment = useCallback((name: string) => {
-    if (!experiment) return;
-    persist({ ...experiment, name });
-  }, [experiment, persist]);
+    const current = experimentRef.current;
+    if (!current) return;
+    persist({ ...current, name });
+  }, [persist]);
 
   return {
     experiment,
